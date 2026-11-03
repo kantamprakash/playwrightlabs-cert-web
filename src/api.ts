@@ -48,6 +48,20 @@ export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : 'Something went wrong. Please try again.'
 }
 
+/** e.g. "Wed, 5 Nov 2026, 10:00 am IST", in the viewer's own time zone. */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  })
+}
+
 export function formatDate(iso: string | null | undefined, withTime = false): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('en-IN', {
@@ -78,15 +92,30 @@ export type ExamAccess = {
   exam: ExamSummary
   grantedAt: string
   expiresAt: string
-  state: 'AVAILABLE' | 'IN_PROGRESS' | 'COMPLETED' | 'EXPIRED'
+  scheduledAt: string | null
+  startWindowEndsAt: string | null
+  state: 'NOT_SCHEDULED' | 'SCHEDULED' | 'READY' | 'MISSED' | 'IN_PROGRESS' | 'COMPLETED' | 'EXPIRED'
   attemptId: number | null
   scorePercent: number | null
   passed: boolean | null
 }
 
-export type CertificateItem = { certNo: string; examTitle: string; scorePercent: number; issuedAt: string; revoked: boolean }
+/** certified=false is a certificate of participation (issued below the pass mark). */
+export type CertificateItem = {
+  certNo: string
+  examTitle: string
+  scorePercent: number
+  issuedAt: string
+  certified: boolean
+  revoked: boolean
+}
 
-export type Dashboard = { exams: ExamAccess[]; certificates: CertificateItem[] }
+export type Dashboard = {
+  exams: ExamAccess[]
+  certificates: CertificateItem[]
+  serverTime: string
+  minScheduleNoticeMinutes: number
+}
 
 export type AttemptQuestion = {
   id: number
@@ -129,5 +158,6 @@ export type Verification = {
   examTitle: string
   issuedAt: string
   valid: boolean
+  certified: boolean
   revokedAt: string | null
 }

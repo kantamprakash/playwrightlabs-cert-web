@@ -179,7 +179,7 @@ function ExamRunner({ attempt, onFinished }: { attempt: Attempt; onFinished: () 
     <>
       <header className="exam-bar">
         <div className="container">
-          <strong style={{ fontFamily: 'Poppins, sans-serif' }}>{attempt.examTitle}</strong>
+          <strong>{attempt.examTitle}</strong>
           <span className="faint" aria-live="polite" style={{ marginLeft: 'auto' }}>
             {saveState === 'saving' && 'Saving…'}
             {saveState === 'saved' && 'All answers saved'}
@@ -339,13 +339,16 @@ function ResultView({ attempt }: { attempt: Attempt }) {
           </div>
           {r.certificateNo && (
             <div className="row" style={{ justifyContent: 'center' }}>
-              <a className="btn" href={`/api/me/certificates/${r.certificateNo}/pdf`}>Download certificate</a>
+              <a className="btn" href={`/api/me/certificates/${r.certificateNo}/pdf`} download>
+                {r.passed ? 'Download certificate' : 'Download certificate of participation'}
+              </a>
               <Link className="btn secondary" to={`/verify/${r.certificateNo}`}>Public verification page</Link>
             </div>
           )}
           {!r.passed && (
             <p className="muted" style={{ marginBottom: 0 }}>
               The topic breakdown below shows where to focus. Playwright Labs training can help you prepare.
+              {r.certificateNo && ' Your certificate is saved in your dashboard, so you can download it again at any time.'}
             </p>
           )}
         </div>

@@ -9,6 +9,7 @@ type CertificateRow = {
   email: string
   examTitle: string
   scorePercent: number
+  certified: boolean
   issuedAt: string
   revokedAt: string | null
   revokeReason: string | null
@@ -44,7 +45,7 @@ export function AdminCertificates() {
                 <td><Link to={`/verify/${c.certNo}`}>{c.certNo}</Link></td>
                 <td>{c.holderName}<div className="faint">{c.email}</div></td>
                 <td>{c.examTitle}</td>
-                <td>{c.scorePercent}%</td>
+                <td>{c.scorePercent}%<div className="faint">{c.certified ? 'Achievement' : 'Participation'}</div></td>
                 <td>{formatDate(c.issuedAt)}</td>
                 <td>
                   {c.revokedAt ? (

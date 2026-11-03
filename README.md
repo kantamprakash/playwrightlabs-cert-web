@@ -16,6 +16,14 @@ npm run build      # type-check and build to dist/
 npm run lint
 ```
 
+## Run in Docker
+
+The `Dockerfile` builds the app and serves it with Nginx, which proxies `/api` to the `api` container. The compose file that starts the whole stack (database, API, web) is in `playwrightlabs-cert-api`. See that README, or run from there:
+
+```bash
+docker compose --profile app up -d --build    # then open http://localhost:8088
+```
+
 ## Pages
 
 | Route | Who | Purpose |

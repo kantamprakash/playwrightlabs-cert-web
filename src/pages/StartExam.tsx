@@ -19,6 +19,8 @@ export function StartExam() {
   const access = data?.exams.find((e) => e.entitlementId === Number(entitlementId))
   if (!access) return <Navigate to="/dashboard" replace />
   if (access.attemptId) return <Navigate to={`/attempts/${access.attemptId}`} replace />
+  // The exam can only be started inside its booked slot; the dashboard explains why otherwise.
+  if (access.state !== 'READY') return <Navigate to="/dashboard" replace />
   const exam = access.exam
 
   function begin() {

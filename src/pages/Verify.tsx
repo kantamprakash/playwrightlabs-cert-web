@@ -45,13 +45,16 @@ export function Verify() {
         )}
         {data && !isFetching && (
           <div className="card stack">
-            <span className={`badge ${data.valid ? 'green' : 'red'}`}>{data.valid ? '✓ Valid certificate' : 'Revoked'}</span>
+            <div className="row">
+              <span className={`badge ${data.valid ? 'green' : 'red'}`}>{data.valid ? '✓ Genuine certificate' : 'Revoked'}</span>
+              <span className="badge">{data.certified ? 'Certificate of Achievement' : 'Certificate of Participation'}</span>
+            </div>
             <div>
               <div className="stat-label">Awarded to</div>
               <div className="stat">{data.holderName}</div>
             </div>
             <dl className="grid" style={{ margin: 0 }}>
-              <div><dt className="stat-label">Certification</dt><dd style={{ margin: 0 }}>{data.examTitle}</dd></div>
+              <div><dt className="stat-label">{data.certified ? 'Certification' : 'Examination taken'}</dt><dd style={{ margin: 0 }}>{data.examTitle}</dd></div>
               <div><dt className="stat-label">Issued</dt><dd style={{ margin: 0 }}>{formatDate(data.issuedAt)}</dd></div>
               <div><dt className="stat-label">Certificate number</dt><dd style={{ margin: 0 }}>{data.certNo}</dd></div>
             </dl>

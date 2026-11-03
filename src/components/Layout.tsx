@@ -13,7 +13,11 @@ export function Layout() {
 
   async function signOut() {
     await post('/api/auth/logout')
-    queryClient.clear()
+    // Mark the user as signed out so the header updates immediately. (clear() alone empties the
+    // cache but leaves mounted components showing the last user they saw.) Then drop everything
+    // else that belonged to the previous user, such as the dashboard and admin data.
+    queryClient.setQueryData(['me'], null)
+    queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== 'me' })
     navigate('/')
   }
 
@@ -55,22 +59,33 @@ export function Layout() {
   )
 }
 
+/** The theme in effect: the visitor's choice if they made one, otherwise the device setting. */
+function currentTheme(): 'light' | 'dark' {
+  const chosen = document.documentElement.dataset.theme
+  if (chosen === 'light' || chosen === 'dark') return chosen
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 export function ThemeToggle() {
-  const [light, setLight] = useState(() => document.documentElement.dataset.theme === 'light')
+  const [theme, setTheme] = useState(currentTheme)
   function toggle() {
-    const next = !light
-    setLight(next)
-    if (next) document.documentElement.dataset.theme = 'light'
-    else delete document.documentElement.dataset.theme
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    document.documentElement.dataset.theme = next
     try {
-      localStorage.setItem('pwl-theme', next ? 'light' : 'dark')
+      localStorage.setItem('pwl-theme', next)
     } catch {
       // Storage can be unavailable (private mode); the toggle still works for this visit.
     }
   }
+  const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
   return (
-    <button className="linkish" onClick={toggle} aria-label={light ? 'Switch to dark theme' : 'Switch to light theme'} title="Toggle theme">
-      {light ? '☾' : '☀'}
+    <button className="theme-toggle" onClick={toggle} aria-label={label} title={label}>
+      {/* Half-filled circle, as used by playwright.dev's toggle. */}
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" />
+      </svg>
     </button>
   )
 }
