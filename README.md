@@ -6,7 +6,7 @@ React 19 + TypeScript + Vite frontend for `certify.playwrightlabs.com`. It talks
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173; /api is proxied to the API on localhost:8085
+npm run dev        # http://localhost:5173; /api/auth and /api/admin/users go to the auth service (8087), the rest to cert-api (8085)
 ```
 
 Start the API first (see `cert-api/README.md`). Dev admin login: `admin@playwrightlabs.local` / `admin12345`.
