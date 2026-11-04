@@ -18,11 +18,7 @@ npm run lint
 
 ## Run in Docker
 
-The `Dockerfile` builds the app and serves it with Nginx, which proxies `/api` to the `api` container. The compose file that starts the whole stack (database, API, web) is in `playwrightlabs-cert-api`. See that README, or run from there:
-
-```bash
-docker compose --profile app up -d --build    # then open http://localhost:8088
-```
+The `Dockerfile` builds the app and serves it with Nginx (non-root, port 8080), which passes `/api/**` to `API_UPSTREAM` (the gateway). The whole platform runs from `playwrightlabs-cert-deploy`: `docker compose up -d --build` there (http://localhost:8088), or on Kubernetes with its `k8s/` folder.
 
 ## Pages
 
