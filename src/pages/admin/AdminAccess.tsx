@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { api, formatDate, post } from '../../api'
 import { Alert, Field } from '../../components/Field'
@@ -18,6 +18,11 @@ export function AdminAccess() {
   })
   const give = useMutation({
     mutationFn: () => post<{ entitlementId: number; expiresAt: string }>('/api/admin/entitlements', { ...grant, examId }),
+  })
+  const queryClient = useQueryClient()
+  const verify = useMutation({
+    mutationFn: (id: number) => post<UserRow>(`/api/admin/users/${id}/verify`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 
   function submit(e: FormEvent) {
@@ -68,7 +73,21 @@ export function AdminAccess() {
                 <tr key={u.id}>
                   <td>{u.fullName}</td>
                   <td>{u.email}</td>
-                  <td>{u.emailVerified ? 'Yes' : <span className="badge orange">No</span>}</td>
+                  <td>
+                    {u.emailVerified ? 'Yes' : (
+                      <div className="row" style={{ flexWrap: 'nowrap', gap: 8 }}>
+                        <span className="badge orange">No</span>
+                        <button
+                          className="btn secondary small"
+                          disabled={verify.isPending}
+                          onClick={() => verify.mutate(u.id)}
+                          title="Use when the verification email can't reach the candidate"
+                        >
+                          Mark as verified
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td>{u.role === 'ADMIN' ? 'Admin' : 'Candidate'}</td>
                   <td>{formatDate(u.createdAt)}</td>
                   <td>

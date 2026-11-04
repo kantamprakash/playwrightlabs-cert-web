@@ -27,7 +27,13 @@ export async function api<T>(path: string, { json, headers, ...init }: Options =
   const text = await res.text()
   const data = text ? safeJson(text) : null
   if (!res.ok) {
-    const message = data?.message ?? (res.status >= 500 ? 'Something went wrong. Please try again.' : res.statusText)
+    const message =
+      data?.message ??
+      (res.status === 429
+        ? 'Too many attempts. Please wait a minute and try again.'
+        : res.status >= 500
+          ? 'Something went wrong. Please try again.'
+          : res.statusText || 'Request failed.')
     throw new ApiError(res.status, data?.code ?? 'HTTP_' + res.status, message, data?.fields)
   }
   return data as T
