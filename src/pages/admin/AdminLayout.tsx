@@ -11,8 +11,13 @@ export type AdminExam = {
   questionCount: number
   passPercent: number
   priceInr: number
+  retakePriceInr: number | null
+  retakeCooldownDays: number
+  kind: 'CERTIFICATION' | 'PRACTICE'
   published: boolean
   activeQuestions: number
+  /** Why attempts can't be drawn yet (too few questions, or the blueprint doesn't fit); null when ready. */
+  problem: string | null
 }
 
 export function useAdminExams() {
@@ -29,6 +34,8 @@ export function AdminLayout() {
         <NavLink to="/admin/access">Candidates &amp; access</NavLink>
         <NavLink to="/admin/attempts">Attempts</NavLink>
         <NavLink to="/admin/certificates">Certificates</NavLink>
+        <NavLink to="/admin/sales">Orders &amp; coupons</NavLink>
+        <NavLink to="/admin/audit">Audit log</NavLink>
       </nav>
       <Outlet />
     </main>

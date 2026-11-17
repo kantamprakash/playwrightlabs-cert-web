@@ -4,11 +4,15 @@ import { api, ApiError } from '../../api'
 import { Alert, Field } from '../../components/Field'
 import { useAdminExams } from './AdminLayout'
 
+type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
+const DIFFICULTY_LABEL: Record<Difficulty, string> = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard' }
+
 type Option = { id?: number; text: string; correct: boolean }
 type Question = {
   id: number
   type: 'SINGLE' | 'MULTI'
   topic: string | null
+  difficulty: Difficulty
   text: string
   codeSnippet: string | null
   explanation: string | null
@@ -20,6 +24,7 @@ type QuestionForm = Omit<Question, 'id'>
 const NEW_QUESTION: QuestionForm = {
   type: 'SINGLE',
   topic: '',
+  difficulty: 'MEDIUM',
   text: '',
   codeSnippet: '',
   explanation: '',
@@ -33,9 +38,9 @@ const NEW_QUESTION: QuestionForm = {
 }
 
 const CSV_TEMPLATE =
-  'type,topic,question,code,option_a,option_b,option_c,option_d,option_e,option_f,correct,explanation\n' +
-  'SINGLE,Locators,"Which locator is most resilient for a Submit button?",,"page.getByRole(\'button\', { name: \'Submit\' })","page.locator(\'.btn-1\')","page.locator(\'//div[3]/button\')",,,,A,"Role locators match what users see."\n' +
-  'MULTI,Configuration,"Which are valid `use` options? (Select all that apply)",,baseURL,trace,testDir,,,,A;B,"testDir is top-level."\n'
+  'type,topic,difficulty,question,code,option_a,option_b,option_c,option_d,option_e,option_f,correct,explanation\n' +
+  'SINGLE,Locators,EASY,"Which locator is most resilient for a Submit button?",,"page.getByRole(\'button\', { name: \'Submit\' })","page.locator(\'.btn-1\')","page.locator(\'//div[3]/button\')",,,,A,"Role locators match what users see."\n' +
+  'MULTI,Configuration,MEDIUM,"Which are valid `use` options? (Select all that apply)",,baseURL,trace,testDir,,,,A;B,"testDir is top-level."\n'
 
 export function AdminQuestions() {
   const { data: exams } = useAdminExams()
@@ -43,6 +48,7 @@ export function AdminQuestions() {
   const selectedExam = examId ?? exams?.[0]?.id ?? null
   const [editing, setEditing] = useState<Question | 'new' | null>(null)
   const [filter, setFilter] = useState('')
+  const [level, setLevel] = useState<Difficulty | ''>('')
 
   const { data: questions, isPending } = useQuery({
     queryKey: ['admin', 'questions', selectedExam],
@@ -56,9 +62,12 @@ export function AdminQuestions() {
   }
 
   const shown = (questions ?? []).filter(
-    (q) => !filter || (q.text + ' ' + (q.topic ?? '')).toLowerCase().includes(filter.toLowerCase()),
+    (q) =>
+      (!level || q.difficulty === level) &&
+      (!filter || (q.text + ' ' + (q.topic ?? '')).toLowerCase().includes(filter.toLowerCase())),
   )
-  const active = questions?.filter((q) => q.active).length ?? 0
+  const active = questions?.filter((q) => q.active) ?? []
+  const count = (d: Difficulty) => active.filter((q) => q.difficulty === d).length
 
   return (
     <div className="stack">
@@ -69,7 +78,15 @@ export function AdminQuestions() {
           </select>
         )}
         <input type="search" placeholder="Search questions" value={filter} onChange={(e) => setFilter(e.target.value)} style={{ maxWidth: 280 }} />
-        <span className="faint">{active} active / {questions?.length ?? 0} total</span>
+        <select value={level} onChange={(e) => setLevel(e.target.value as Difficulty | '')} style={{ maxWidth: 160 }} aria-label="Difficulty">
+          <option value="">All levels</option>
+          <option value="EASY">Easy</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HARD">Hard</option>
+        </select>
+        <span className="faint">
+          {active.length} active ({count('EASY')} easy · {count('MEDIUM')} medium · {count('HARD')} hard) / {questions?.length ?? 0} total
+        </span>
         <button className="btn small" style={{ marginLeft: 'auto' }} onClick={() => setEditing('new')}>Add question</button>
       </div>
 
@@ -81,7 +98,7 @@ export function AdminQuestions() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>#</th><th>Question</th><th>Topic</th><th>Type</th><th>Status</th><th /></tr>
+              <tr><th>#</th><th>Question</th><th>Topic</th><th>Level</th><th>Type</th><th>Status</th><th /></tr>
             </thead>
             <tbody>
               {shown.map((q) => (
@@ -89,6 +106,7 @@ export function AdminQuestions() {
                   <td className="faint">{q.id}</td>
                   <td>{q.text}</td>
                   <td>{q.topic ?? '—'}</td>
+                  <td>{DIFFICULTY_LABEL[q.difficulty]}</td>
                   <td>{q.type === 'SINGLE' ? 'Single' : 'Multiple'}</td>
                   <td>{q.active ? <span className="badge green">Active</span> : <span className="badge">Retired</span>}</td>
                   <td><button className="btn secondary small" onClick={() => setEditing(q)}>Edit</button></td>
@@ -128,7 +146,7 @@ function CsvImport({ examId }: { examId: number }) {
       <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Bulk import from CSV</summary>
       <div className="stack" style={{ marginTop: 12 }}>
         <p className="faint" style={{ margin: 0 }}>
-          Columns: type (SINGLE or MULTI), topic, question, code, option_a … option_f, correct (letters, e.g. B or A;C), explanation.
+          Columns: type (SINGLE or MULTI), topic, difficulty (EASY, MEDIUM or HARD; blank is MEDIUM), question, code, option_a … option_f, correct (letters, e.g. B or A;C), explanation.
           If any row is invalid, nothing is imported.{' '}
           <button type="button" className="linkish" style={{ color: 'var(--primary)' }} onClick={downloadTemplate}>Download template</button>
         </p>
@@ -190,6 +208,13 @@ function QuestionEditor({ examId, question, onDone }: { examId: number; question
         </Field>
         <Field label="Topic" hint="Used for the candidate's score breakdown.">
           <input type="text" value={form.topic ?? ''} onChange={(e) => setForm({ ...form, topic: e.target.value })} />
+        </Field>
+        <Field label="Difficulty" hint="Attempts draw a set number of questions of each level (see the exam's blueprint).">
+          <select value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value as Difficulty })}>
+            <option value="EASY">Easy</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HARD">Hard</option>
+          </select>
         </Field>
       </div>
       <Field label="Question" error={fields.text}>

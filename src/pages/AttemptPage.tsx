@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { api, ApiError, formatDate, post, put, type Attempt, type AttemptQuestion } from '../api'
+import { api, ApiError, formatDate, post, put, type Attempt, type AttemptQuestion, type ReviewItem } from '../api'
 import { Alert } from '../components/Field'
 import { ThemeToggle } from '../components/Layout'
 
@@ -284,7 +284,11 @@ function ExamRunner({ attempt, onFinished }: { attempt: Attempt; onFinished: () 
               <p className="muted">You have answered every question.</p>
             )}
             {flagged.length > 0 && <p className="muted">{flagged.length} question(s) are flagged for review.</p>}
-            <p className="muted">You cannot change your answers after submitting. There are no retakes.</p>
+            <p className="muted">
+              {attempt.practice
+                ? 'After submitting you will see the correct answers with explanations.'
+                : 'You cannot change your answers after submitting.'}
+            </p>
             <div className="row">
               <button className="btn" disabled={submitting} onClick={submit}>
                 {submitting ? 'Submitting…' : 'Submit now'}
@@ -325,9 +329,13 @@ function ResultView({ attempt }: { attempt: Attempt }) {
       <main className="container page stack" style={{ maxWidth: 760 }}>
         <div className="card stack" style={{ textAlign: 'center' }}>
           <div className={`badge ${r.passed ? 'green' : 'red'}`} style={{ alignSelf: 'center' }}>
-            {r.passed ? 'Passed' : 'Not passed'}
+            {attempt.practice ? 'Practice test · ' : ''}{r.passed ? 'Passed' : 'Not passed'}
           </div>
-          <h1>{r.passed ? 'Congratulations!' : 'Thank you for taking the exam'}</h1>
+          <h1>
+            {attempt.practice
+              ? r.passed ? 'Well done!' : 'Keep practising'
+              : r.passed ? 'Congratulations!' : 'Thank you for taking the exam'}
+          </h1>
           <p className="muted">
             {attempt.examTitle} · submitted {formatDate(r.submittedAt, true)}
             {r.autoSubmitted && ' (time ran out)'}
@@ -345,9 +353,16 @@ function ResultView({ attempt }: { attempt: Attempt }) {
               <Link className="btn secondary" to={`/verify/${r.certificateNo}`}>Public verification page</Link>
             </div>
           )}
-          {!r.passed && (
+          {attempt.practice ? (
+            <div className="row" style={{ justifyContent: 'center' }}>
+              <Link className="btn" to="/dashboard">Back to dashboard</Link>
+              <a className="btn secondary" href="#review">Review your answers</a>
+            </div>
+          ) : !r.passed && (
             <p className="muted" style={{ marginBottom: 0 }}>
-              The topic breakdown below shows where to focus. Playwright Labs training can help you prepare.
+              The topic breakdown below shows where to focus. When your retake opens, you can book it
+              from your <Link to="/dashboard">dashboard</Link>; the free practice test there is a good way to
+              prepare.
               {r.certificateNo && ' Your certificate is saved in your dashboard, so you can download it again at any time.'}
             </p>
           )}
@@ -372,7 +387,43 @@ function ResultView({ attempt }: { attempt: Attempt }) {
             </table>
           </div>
         </div>
+
+        {r.review && (
+          <section className="stack" id="review">
+            <h2>Your answers</h2>
+            {r.review.map((item) => <ReviewCard key={item.position} item={item} />)}
+          </section>
+        )}
       </main>
     </>
+  )
+}
+
+function ReviewCard({ item }: { item: ReviewItem }) {
+  return (
+    <div className="card stack">
+      <div className="spread">
+        <span className="faint">
+          Question {item.position}
+          {item.topic && <> · {item.topic}</>}
+        </span>
+        <span className={`badge ${item.correct ? 'green' : 'red'}`}>{item.correct ? 'Correct' : 'Incorrect'}</span>
+      </div>
+      <h3 style={{ margin: 0 }}>{item.text}</h3>
+      {item.codeSnippet && <pre style={{ margin: 0 }}>{item.codeSnippet}</pre>}
+      <ul className="review-options">
+        {item.options.map((o) => {
+          const picked = item.selected.includes(o.id)
+          return (
+            <li key={o.id} className={o.correct ? 'right' : picked ? 'wrong' : ''}>
+              <span aria-hidden="true">{o.correct ? '✓' : picked ? '✗' : '·'}</span>
+              {looksLikeCode(o.text) ? <code>{o.text}</code> : <span>{o.text}</span>}
+              {picked && <span className="faint"> (your answer)</span>}
+            </li>
+          )
+        })}
+      </ul>
+      {item.explanation && <p className="muted" style={{ margin: 0 }}><strong>Why:</strong> {item.explanation}</p>}
+    </div>
   )
 }

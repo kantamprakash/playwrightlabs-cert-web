@@ -52,7 +52,13 @@ export function Layout() {
       <footer className="footer">
         <div className="container spread">
           <span>© {new Date().getFullYear()} Playwright Labs</span>
-          <a href={MAIN_SITE}>playwrightlabs.com</a>
+          <nav className="row" aria-label="Policies">
+            <Link to="/terms">Terms</Link>
+            <Link to="/refund-policy">Refunds</Link>
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/contact">Contact</Link>
+            <a href={MAIN_SITE}>playwrightlabs.com</a>
+          </nav>
         </div>
       </footer>
     </>

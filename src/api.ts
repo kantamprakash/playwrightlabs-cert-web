@@ -82,15 +82,72 @@ export function formatDate(iso: string | null | undefined, withTime = false): st
 
 export type User = { id: number; email: string; fullName: string; role: 'CANDIDATE' | 'ADMIN' }
 
+/** Prices include GST. retakePriceInr applies after a failed attempt. */
 export type ExamSummary = {
   id: number
   slug: string
   title: string
   description: string
+  kind: 'CERTIFICATION' | 'PRACTICE'
   durationMinutes: number
   questionCount: number
   passPercent: number
   priceInr: number
+  retakePriceInr: number
+  retakeCooldownDays: number
+}
+
+/** e.g. "₹2,999" */
+export function rupees(amount: number): string {
+  return '₹' + amount.toLocaleString('en-IN')
+}
+
+/** A certification the candidate can buy now (availableFrom null) or later (a retake still in its wait). */
+export type Offer = { exam: ExamSummary; retake: boolean; priceInr: number; availableFrom: string | null }
+
+export type PracticeResult = {
+  attemptId: number
+  examTitle: string
+  status: 'IN_PROGRESS' | 'COMPLETED'
+  startedAt: string
+  scorePercent: number | null
+  passed: boolean | null
+}
+
+export type Quote = {
+  examSlug: string
+  examTitle: string
+  retake: boolean
+  listPriceInr: number
+  discountInr: number
+  totalInr: number
+  couponCode: string | null
+  onlinePaymentAvailable: boolean
+}
+
+export type CheckoutResult = {
+  status: 'ENROLLED' | 'PAYMENT_REQUIRED'
+  entitlementId: number | null
+  payment: {
+    keyId: string
+    razorpayOrderId: string
+    amountPaise: number
+    currency: string
+    description: string
+    buyerName: string
+    buyerEmail: string
+    /** Payments are simulated (test mode): show the test payment step instead of Razorpay. */
+    mock: boolean
+  } | null
+}
+
+export type OrderView = {
+  id: number
+  examTitle: string
+  retake: boolean
+  amountPaise: number
+  invoiceNo: string | null
+  paidAt: string
 }
 
 export type ExamAccess = {
@@ -118,6 +175,9 @@ export type CertificateItem = {
 
 export type Dashboard = {
   exams: ExamAccess[]
+  offers: Offer[]
+  practiceTests: ExamSummary[]
+  practiceResults: PracticeResult[]
   certificates: CertificateItem[]
   serverTime: string
   minScheduleNoticeMinutes: number
@@ -142,11 +202,27 @@ export type AttemptResult = {
   submittedAt: string
   certificateNo: string | null
   topics: { topic: string; correct: number; total: number }[]
+  /** Practice tests only: every question with the right answer and explanation. */
+  review: ReviewItem[] | null
+}
+
+export type ReviewItem = {
+  position: number
+  type: 'SINGLE' | 'MULTI'
+  topic: string | null
+  text: string
+  codeSnippet: string | null
+  options: { id: number; text: string; correct: boolean }[]
+  selected: number[]
+  correct: boolean
+  explanation: string | null
 }
 
 export type Attempt = {
   id: number
   examTitle: string
+  examSlug: string
+  practice: boolean
   status: 'IN_PROGRESS' | 'COMPLETED'
   startedAt: string
   deadlineAt: string

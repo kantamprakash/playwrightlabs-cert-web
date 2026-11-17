@@ -41,7 +41,7 @@ export function StartExam() {
         <div>
           <h2>Before you start</h2>
           <ul className="clean muted">
-            <li><strong>You get one attempt.</strong> Once started, the timer keeps running even if you close the browser.</li>
+            <li><strong>This uses your attempt.</strong> Once started, the timer keeps running even if you close the browser.</li>
             <li>Your answers are saved as you go. If you lose connection, reopen the exam from your dashboard to continue.</li>
             <li>Some questions have more than one correct answer and say "Select all that apply". You must pick every correct option, and nothing else, to get the mark.</li>
             <li>The exam is submitted automatically when time runs out.</li>
@@ -52,7 +52,7 @@ export function StartExam() {
         {start.isError && <Alert kind="error">{start.error.message}</Alert>}
         <label className="check">
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-          <span>I understand that I have one attempt and that the timer starts as soon as I begin.</span>
+          <span>I understand that starting uses this attempt and that the timer starts as soon as I begin.</span>
         </label>
         <div className="row">
           <button className="btn" disabled={!agreed || start.isPending} onClick={begin}>

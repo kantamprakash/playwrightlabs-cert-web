@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
-import { api, formatDate, formatDateTime, post, put, type Dashboard as DashboardData, type ExamAccess, type ExamSummary } from '../api'
+import { Link, useNavigate } from 'react-router'
+import {
+  api, formatDate, formatDateTime, post, put, rupees,
+  type Dashboard as DashboardData, type ExamAccess, type ExamSummary, type Offer, type OrderView, type PracticeResult,
+} from '../api'
 import { useMe } from '../auth'
+import { Checkout } from '../components/Checkout'
 import { Alert } from '../components/Field'
 import { MAIN_SITE } from '../components/Layout'
 import { SchedulePicker } from '../components/SchedulePicker'
@@ -19,9 +23,8 @@ export function useDashboard() {
 export function Dashboard() {
   const { data: me } = useMe()
   const { data, isPending, error } = useDashboard()
-  const { data: exams } = useQuery({ queryKey: ['exams'], queryFn: () => api<ExamSummary[]>('/api/exams') })
-  // Each exam can be enrolled in once; after that it shows under "Your exams" instead.
-  const notEnrolled = (exams ?? []).filter((x) => !data?.exams.some((e) => e.exam.id === x.id))
+  const { data: orders } = useQuery({ queryKey: ['orders'], queryFn: () => api<OrderView[]>('/api/me/orders') })
+  const invoices = (orders ?? []).filter((o) => o.invoiceNo)
 
   return (
     <main className="container page stack">
@@ -35,13 +38,6 @@ export function Dashboard() {
 
       {data && (
         <>
-          {notEnrolled.length > 0 && (
-            <section className="stack">
-              <h2>Available certifications</h2>
-              {notEnrolled.map((exam) => <EnrolCard key={exam.id} exam={exam} minNotice={data.minScheduleNoticeMinutes} />)}
-            </section>
-          )}
-
           {data.exams.length > 0 && (
             <section className="stack">
               <h2>Your exams</h2>
@@ -51,7 +47,21 @@ export function Dashboard() {
             </section>
           )}
 
-          {data.exams.length === 0 && exams?.length === 0 && (
+          {data.offers.length > 0 && (
+            <section className="stack">
+              <h2>{data.offers.some((o) => o.retake) ? 'Book again' : 'Get certified'}</h2>
+              {data.offers.map((o) => <OfferCard key={o.exam.id} offer={o} />)}
+            </section>
+          )}
+
+          {data.practiceTests.length > 0 && (
+            <section className="stack">
+              <h2>Practice</h2>
+              {data.practiceTests.map((p) => <PracticeCard key={p.id} exam={p} results={data.practiceResults} />)}
+            </section>
+          )}
+
+          {data.exams.length === 0 && data.offers.length === 0 && (
             <div className="card">
               <h3>No exams are open yet</h3>
               <p className="muted" style={{ margin: 0 }}>
@@ -89,19 +99,77 @@ export function Dashboard() {
               ))}
             </section>
           )}
+
+          {invoices.length > 0 && (
+            <section className="stack">
+              <h2>Payments</h2>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Date</th><th>Item</th><th>Amount</th><th>Invoice</th></tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map((o) => (
+                      <tr key={o.id}>
+                        <td>{formatDate(o.paidAt)}</td>
+                        <td>{o.examTitle}{o.retake && ' (retake)'}</td>
+                        <td>{rupees(o.amountPaise / 100)}</td>
+                        <td><a href={`/api/me/orders/${o.id}/invoice`} download>{o.invoiceNo}</a></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </>
       )}
     </main>
   )
 }
 
-function EnrolCard({ exam, minNotice }: { exam: ExamSummary; minNotice: number }) {
-  const queryClient = useQueryClient()
-  const [choosing, setChoosing] = useState(false)
-  const enrol = useMutation({
-    mutationFn: (scheduledAt: string) => post<{ entitlementId: number }>(`/api/exams/${exam.slug}/enrol`, { scheduledAt }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+function OfferCard({ offer }: { offer: Offer }) {
+  const [buying, setBuying] = useState(false)
+  const { exam } = offer
+  const waiting = offer.availableFrom !== null
+
+  return (
+    <div className="card stack">
+      <div className="spread">
+        <div>
+          <h3 style={{ marginBottom: 4 }}>{exam.title}{offer.retake && ' – retake'}</h3>
+          <div className="faint">
+            {exam.questionCount} questions · {exam.durationMinutes} minutes · Pass mark {exam.passPercent}%
+          </div>
+          {waiting && (
+            <div style={{ color: 'var(--warn)', marginTop: 4 }}>
+              Your retake opens on {formatDate(offer.availableFrom)}. Use the practice test to prepare.
+            </div>
+          )}
+        </div>
+        {!buying && (
+          <div className="row">
+            <span className="badge">{rupees(offer.priceInr)} incl. GST</span>
+            <button className="btn" disabled={waiting} onClick={() => setBuying(true)}>
+              {offer.retake ? 'Book retake' : 'Enrol now'}
+            </button>
+          </div>
+        )}
+      </div>
+      {!offer.retake && <p className="muted" style={{ margin: 0 }}>{exam.description}</p>}
+      {buying && <Checkout offer={offer} onDone={() => setBuying(false)} onCancel={() => setBuying(false)} />}
+    </div>
+  )
+}
+
+function PracticeCard({ exam, results }: { exam: ExamSummary; results: PracticeResult[] }) {
+  const navigate = useNavigate()
+  const start = useMutation({
+    mutationFn: () => post<{ attemptId: number }>(`/api/attempts/practice/${exam.slug}`),
+    onSuccess: ({ attemptId }) => navigate(`/attempts/${attemptId}`),
   })
+  const mine = results.filter((r) => r.examTitle === exam.title)
+  const open = mine.find((r) => r.status === 'IN_PROGRESS')
 
   return (
     <div className="card stack">
@@ -109,26 +177,24 @@ function EnrolCard({ exam, minNotice }: { exam: ExamSummary; minNotice: number }
         <div>
           <h3 style={{ marginBottom: 4 }}>{exam.title}</h3>
           <div className="faint">
-            {exam.questionCount} questions · {exam.durationMinutes} minutes · Pass mark {exam.passPercent}% · One attempt
+            Free · {exam.questionCount} questions · {exam.durationMinutes} minutes · answers and explanations at the end
           </div>
         </div>
-        {!choosing && (
-          <div className="row">
-            <span className="badge green">Free enrolment</span>
-            <button className="btn" onClick={() => setChoosing(true)}>Enrol now</button>
-          </div>
-        )}
+        <button className="btn secondary" disabled={start.isPending} onClick={() => start.mutate()}>
+          {open ? 'Resume practice' : mine.length ? 'Practise again' : 'Start practice test'}
+        </button>
       </div>
-      <p className="muted" style={{ margin: 0 }}>{exam.description}</p>
-      {choosing && (
-        <SchedulePicker
-          minNoticeMinutes={minNotice}
-          submitLabel="Confirm enrolment"
-          pending={enrol.isPending}
-          error={enrol.error?.message}
-          onSubmit={(at) => enrol.mutate(at)}
-          onCancel={() => { enrol.reset(); setChoosing(false) }}
-        />
+      {start.isError && <Alert kind="error">{start.error.message}</Alert>}
+      {mine.some((r) => r.status === 'COMPLETED') && (
+        <div className="faint">
+          Recent scores:{' '}
+          {mine.filter((r) => r.status === 'COMPLETED').slice(0, 5).map((r, i) => (
+            <span key={r.attemptId}>
+              {i > 0 && ', '}
+              <Link to={`/attempts/${r.attemptId}`}>{r.scorePercent}%</Link>
+            </span>
+          ))}
+        </div>
       )}
     </div>
   )

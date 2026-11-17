@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { api, type ExamSummary } from '../api'
+import { api, rupees, type ExamSummary } from '../api'
 import { useMe } from '../auth'
 
 const TOPICS = [
@@ -14,17 +14,57 @@ const TOPICS = [
   'Parallelism, retries and CI',
 ]
 
-const STEPS = [
-  { title: 'Enrol and book a slot', text: 'Create an account, verify your email and enrol from your dashboard. Pick the date and time that suits you. Enrolment is free for now.' },
-  { title: 'Take the exam online', text: 'A timed, multiple-choice exam on real Playwright Test skills. Answers save as you go. You get one attempt, so choose a quiet time.' },
-  { title: 'Get certified', text: 'Pass and download your certificate straight away. Each one has a QR code and a public page where employers can verify it.' },
-]
-
 export function Home() {
   const { data: me } = useMe()
   const { data: exams, isPending } = useQuery({ queryKey: ['exams'], queryFn: () => api<ExamSummary[]>('/api/exams') })
-  const exam = exams?.[0]
+  const exam = exams?.find((e) => e.kind === 'CERTIFICATION')
+  const practice = exams?.find((e) => e.kind === 'PRACTICE')
   const title = exam?.title ?? 'Playwright Certified Tester'
+  const cta = me ? '/dashboard' : '/register'
+
+  const steps = [
+    {
+      title: '1. Register and enrol',
+      text: `Create an account and verify your email. Pay ${exam ? rupees(exam.priceInr) : 'the exam fee'} online by UPI, card or net banking${practice ? ', or start with the free practice test' : ''}.`,
+    },
+    {
+      title: '2. Book and take the exam',
+      text: 'Choose a date and time that suits you. The exam runs online in your browser; answers save as you go.',
+    },
+    {
+      title: '3. Get certified',
+      text: 'See your result and topic breakdown straight away. Pass and download a certificate with a QR code that employers can verify.',
+    },
+  ]
+
+  const faqs = [
+    {
+      q: 'Do I need to take a Playwright course first?',
+      a: 'No. The exam is open to anyone. If you are a Playwright Labs student, ask your trainer for your discount code.',
+    },
+    {
+      q: 'What happens if I don’t pass?',
+      a: exam
+        ? `You see a score for every topic so you know what to work on. You can book a retake ${exam.retakeCooldownDays} days later, for ${rupees(exam.retakePriceInr)}.`
+        : 'You see a score for every topic so you know what to work on, and you can book a retake after a short wait.',
+    },
+    {
+      q: 'Can I reschedule?',
+      a: 'Yes. Change your exam time from your dashboard any time before you start the exam.',
+    },
+    {
+      q: 'What do I need on the day?',
+      a: 'A laptop or desktop with a recent Chrome, Edge or Firefox, a stable internet connection and a quiet room. The exam runs in full screen and leaving the exam window is recorded.',
+    },
+    {
+      q: 'How do employers check my certificate?',
+      a: 'Every certificate has a unique credential ID and QR code. Anyone can confirm it on the Verify page of this site.',
+    },
+    {
+      q: 'Do I get an invoice?',
+      a: 'Yes. Your invoice is emailed to you and can be downloaded from your dashboard at any time.',
+    },
+  ]
 
   return (
     <>
@@ -39,22 +79,20 @@ export function Home() {
               'An online exam on hands-on Playwright skills, with a certificate that employers can verify instantly.'}
           </p>
           <div className="row">
-            {me ? (
-              <Link className="btn lg" to="/dashboard">{exam ? 'Enrol from your dashboard' : 'Go to your dashboard'}</Link>
-            ) : (
-              <>
-                <Link className="btn lg" to="/register">Register to enrol</Link>
-                <Link className="btn secondary lg" to="/login">Sign in</Link>
-              </>
+            <Link className="btn lg" to={cta}>
+              {exam ? `Enrol for ${rupees(exam.priceInr)}` : me ? 'Go to your dashboard' : 'Register'}
+            </Link>
+            {practice && (
+              <Link className="btn secondary lg" to={cta}>Try the free practice test</Link>
             )}
-            <Link className="btn secondary lg" to="/verify">Verify a certificate</Link>
+            {!me && <Link className="btn secondary lg" to="/login">Sign in</Link>}
           </div>
         </div>
       </section>
 
-      <main className="container page" style={{ display: "flex", flexDirection: "column", gap: 48 }}>
+      <main className="container page" style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
         <div className="features">
-          {STEPS.map((s) => (
+          {steps.map((s) => (
             <div className="feature" key={s.title}>
               <h3>{s.title}</h3>
               <p>{s.text}</p>
@@ -64,10 +102,10 @@ export function Home() {
 
         {isPending ? null : exam ? (
           <div className="facts" style={{ margin: 0 }}>
+            <Fact value={rupees(exam.priceInr)} label="incl. GST" />
             <Fact value={`${exam.questionCount}`} label="questions" />
             <Fact value={`${exam.durationMinutes} min`} label="time limit" />
             <Fact value={`${exam.passPercent}%`} label="to pass" />
-            <Fact value="1" label="attempt per enrolment" />
           </div>
         ) : (
           <div className="alert warn" style={{ margin: 0 }}>
@@ -87,10 +125,28 @@ export function Home() {
             <pre><code>{`Questions   ${exam?.questionCount ?? 40}, single and multiple choice
 Time        ${exam?.durationMinutes ?? 60} minutes, auto-submitted
 Pass mark   ${exam?.passPercent ?? 70}%
-Attempts    1 per enrolment
-Result      instant, with a topic breakdown`}</code></pre>
+Result      instant, with a topic breakdown
+Retake      after ${exam?.retakeCooldownDays ?? 7} days${exam ? `, ${rupees(exam.retakePriceInr)}` : ''}`}</code></pre>
             <p>Questions with more than one answer say "Select all that apply". You need every correct option, and nothing else, to get the mark.</p>
           </div>
+        </div>
+
+        <div className="faq">
+          <h2>Questions</h2>
+          {faqs.map((f) => (
+            <details key={f.q}>
+              <summary>{f.q}</summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
+        </div>
+
+        <div className="card spread">
+          <div>
+            <h2 style={{ marginBottom: 4 }}>Hiring? Check a certificate</h2>
+            <p className="muted" style={{ margin: 0 }}>Enter the credential ID or scan the QR code on the certificate.</p>
+          </div>
+          <Link className="btn secondary" to="/verify">Verify a certificate</Link>
         </div>
       </main>
     </>

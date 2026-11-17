@@ -8,6 +8,7 @@ import { AttemptPage } from './pages/AttemptPage'
 import { ForgotPassword, ResetPassword } from './pages/PasswordPages'
 import { Dashboard } from './pages/Dashboard'
 import { Home } from './pages/Home'
+import { Contact, Privacy, RefundPolicy, Terms } from './pages/Legal'
 import { Login } from './pages/Login'
 import { NotFound } from './pages/NotFound'
 import { Register } from './pages/Register'
@@ -20,6 +21,8 @@ import { AdminAttempts } from './pages/admin/AdminAttempts'
 import { AdminCertificates } from './pages/admin/AdminCertificates'
 import { AdminExams } from './pages/admin/AdminExams'
 import { AdminQuestions } from './pages/admin/AdminQuestions'
+import { AdminAudit } from './pages/admin/AdminAudit'
+import { AdminSales } from './pages/admin/AdminSales'
 import './styles.css'
 
 const queryClient = new QueryClient({
@@ -38,6 +41,10 @@ const router = createBrowserRouter([
       { path: '/reset-password', element: <ResetPassword /> },
       { path: '/verify', element: <Verify /> },
       { path: '/verify/:certNo', element: <Verify /> },
+      { path: '/terms', element: <Terms /> },
+      { path: '/refund-policy', element: <RefundPolicy /> },
+      { path: '/privacy', element: <Privacy /> },
+      { path: '/contact', element: <Contact /> },
       { path: '/dashboard', element: <RequireAuth><Dashboard /></RequireAuth> },
       { path: '/start/:entitlementId', element: <RequireAuth><StartExam /></RequireAuth> },
       {
@@ -49,6 +56,8 @@ const router = createBrowserRouter([
           { path: 'access', element: <AdminAccess /> },
           { path: 'attempts', element: <AdminAttempts /> },
           { path: 'certificates', element: <AdminCertificates /> },
+          { path: 'sales', element: <AdminSales /> },
+          { path: 'audit', element: <AdminAudit /> },
         ],
       },
       { path: '*', element: <NotFound /> },
