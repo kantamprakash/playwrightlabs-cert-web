@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router'
 import { api, ApiError, formatDate, post, put, type Attempt, type AttemptQuestion, type ReviewItem } from '../api'
 import { Alert } from '../components/Field'
 import { ThemeToggle } from '../components/Layout'
+import { LabGrading, LabRunner } from './LabRunner'
 
 export function AttemptPage() {
   const { attemptId } = useParams()
@@ -31,7 +32,10 @@ export function AttemptPage() {
     )
   }
   const attempt = query.data
-  return attempt.status === 'COMPLETED' ? <ResultView attempt={attempt} /> : <ExamRunner attempt={attempt} onFinished={finished} />
+  if (attempt.status === 'COMPLETED') return <ResultView attempt={attempt} />
+  if (attempt.status === 'GRADING') return <LabGrading attempt={attempt} onRefresh={refetch} />
+  if (attempt.kind === 'LAB') return <LabRunner attempt={attempt} onFinished={finished} />
+  return <ExamRunner attempt={attempt} onFinished={finished} />
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -368,7 +372,30 @@ function ResultView({ attempt }: { attempt: Attempt }) {
           )}
         </div>
 
-        <div className="card">
+        {attempt.lab?.results && (
+          <section className="stack">
+            <h2>Score by task</h2>
+            {attempt.lab.results.map((t) => (
+              <div className="card stack" key={t.taskId}>
+                <div className="spread">
+                  <h3 style={{ margin: 0 }}>{t.title}</h3>
+                  <span className={`badge ${t.score >= attempt.passPercent ? 'green' : 'red'}`}>{t.score} / 100</span>
+                </div>
+                {t.integrityIssue ? (
+                  <Alert kind="error">{t.integrityIssue}</Alert>
+                ) : (
+                  <div className="faint">
+                    Tests passing on the working app: {t.testsPassed}/{t.testsTotal} · Hidden bugs caught: {t.gatePassed ? `${t.bugsCaught}/${t.bugsTotal}` : '—'} ·
+                    Good practice: {t.qualityPoints}/30
+                  </div>
+                )}
+                <ul className="clean muted" style={{ margin: 0 }}>{t.feedback.map((f) => <li key={f}>{f}</li>)}</ul>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {r.topics.length > 0 && <div className="card">
           <h2>Score by topic</h2>
           <div className="table-wrap">
             <table>
@@ -386,7 +413,7 @@ function ResultView({ attempt }: { attempt: Attempt }) {
               </tbody>
             </table>
           </div>
-        </div>
+        </div>}
 
         {r.review && (
           <section className="stack" id="review">

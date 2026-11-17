@@ -88,7 +88,7 @@ export type ExamSummary = {
   slug: string
   title: string
   description: string
-  kind: 'CERTIFICATION' | 'PRACTICE'
+  kind: 'CERTIFICATION' | 'PRACTICE' | 'LAB'
   durationMinutes: number
   questionCount: number
   passPercent: number
@@ -103,7 +103,8 @@ export function rupees(amount: number): string {
 }
 
 /** A certification the candidate can buy now (availableFrom null) or later (a retake still in its wait). */
-export type Offer = { exam: ExamSummary; retake: boolean; priceInr: number; availableFrom: string | null }
+/** lockedReason: the candidate can't buy it yet, e.g. a prerequisite exam isn't passed. */
+export type Offer = { exam: ExamSummary; retake: boolean; priceInr: number; availableFrom: string | null; lockedReason: string | null }
 
 export type PracticeResult = {
   attemptId: number
@@ -157,7 +158,7 @@ export type ExamAccess = {
   expiresAt: string
   scheduledAt: string | null
   startWindowEndsAt: string | null
-  state: 'NOT_SCHEDULED' | 'SCHEDULED' | 'READY' | 'MISSED' | 'IN_PROGRESS' | 'COMPLETED' | 'EXPIRED'
+  state: 'NOT_SCHEDULED' | 'SCHEDULED' | 'READY' | 'MISSED' | 'IN_PROGRESS' | 'GRADING' | 'COMPLETED' | 'EXPIRED'
   attemptId: number | null
   scorePercent: number | null
   passed: boolean | null
@@ -218,12 +219,53 @@ export type ReviewItem = {
   explanation: string | null
 }
 
+export type LabTest = { title: string; status: string; error: string | null }
+
+/** A "Run tests" result. passed/total/failed are null until status is DONE. */
+export type LabRun = {
+  id: number
+  taskId: number | null
+  status: 'QUEUED' | 'RUNNING' | 'DONE' | 'ERROR'
+  createdAt: string
+  passed: boolean | null
+  total: number | null
+  failed: number | null
+  tests: LabTest[]
+  errors: string[]
+}
+
+export type LabTask = { id: number; key: string; title: string; instructions: string; code: string; lastRun: LabRun | null }
+
+export type LabTaskResult = {
+  taskId: number
+  title: string
+  score: number
+  gatePassed: boolean
+  testsPassed: number
+  testsTotal: number
+  bugsCaught: number
+  bugsTotal: number
+  qualityPoints: number
+  integrityIssue: string | null
+  feedback: string[]
+}
+
+export type LabView = {
+  practiceAppUrl: string
+  practiceRunsLeft: number
+  tasks: LabTask[]
+  grading: boolean
+  gradingProblem: string | null
+  results: LabTaskResult[] | null
+}
+
 export type Attempt = {
   id: number
   examTitle: string
   examSlug: string
+  kind: 'CERTIFICATION' | 'PRACTICE' | 'LAB'
   practice: boolean
-  status: 'IN_PROGRESS' | 'COMPLETED'
+  status: 'IN_PROGRESS' | 'GRADING' | 'COMPLETED'
   startedAt: string
   deadlineAt: string
   serverTime: string
@@ -232,6 +274,7 @@ export type Attempt = {
   tabSwitches: number
   questions: AttemptQuestion[]
   result: AttemptResult | null
+  lab: LabView | null
 }
 
 export type Verification = {

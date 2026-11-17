@@ -296,3 +296,13 @@ ul.clean li { margin-bottom: 6px; }
 .faq details { border-bottom: 1px solid var(--border); padding: 12px 0; }
 .faq summary { cursor: pointer; font-weight: 600; }
 .faq details p { color: var(--text-dim); margin: 8px 0 0; }
+
+/* Hands-on lab. */
+.lab-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .lab-layout { grid-template-columns: minmax(0, 1fr); } }
+.lab-tasks { display: flex; flex-direction: column; gap: 6px; }
+.lab-tasks button { display: flex; justify-content: space-between; gap: 8px; align-items: center; text-align: left; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.lab-tasks button.current { border-color: var(--primary); background: var(--ok-bg); }
+.lab-instructions { white-space: pre-wrap; color: var(--text-dim); }
+.lab-editor { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; font-size: 14px; }
+.lab-output { white-space: pre-wrap; word-break: break-word; font-size: 12.5px; margin: 6px 0 0; max-height: 260px; overflow: auto; }

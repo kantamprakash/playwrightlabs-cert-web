@@ -19,6 +19,7 @@ export function Home() {
   const { data: exams, isPending } = useQuery({ queryKey: ['exams'], queryFn: () => api<ExamSummary[]>('/api/exams') })
   const exam = exams?.find((e) => e.kind === 'CERTIFICATION')
   const practice = exams?.find((e) => e.kind === 'PRACTICE')
+  const lab = exams?.find((e) => e.kind === 'LAB')
   const title = exam?.title ?? 'Playwright Certified Tester'
   const cta = me ? '/dashboard' : '/register'
 
@@ -130,6 +131,18 @@ Retake      after ${exam?.retakeCooldownDays ?? 7} days${exam ? `, ${rupees(exam
             <p>Questions with more than one answer say "Select all that apply". You need every correct option, and nothing else, to get the mark.</p>
           </div>
         </div>
+
+        {lab && (
+          <div className="card stack">
+            <div className="eyebrow">Next level</div>
+            <h2 style={{ margin: 0 }}>{lab.title}</h2>
+            <p className="muted" style={{ margin: 0 }}>{lab.description}</p>
+            <div className="faint">
+              {lab.questionCount} hands-on tasks · {lab.durationMinutes} minutes · {rupees(lab.priceInr)} incl. GST · for
+              holders of the {title} certificate
+            </div>
+          </div>
+        )}
 
         <div className="faq">
           <h2>Questions</h2>

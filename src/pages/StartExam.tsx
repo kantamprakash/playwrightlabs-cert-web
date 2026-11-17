@@ -23,9 +23,12 @@ export function StartExam() {
   if (access.state !== 'READY') return <Navigate to="/dashboard" replace />
   const exam = access.exam
 
+  const lab = exam.kind === 'LAB'
+
   function begin() {
-    // Must run inside the click handler: browsers only allow fullscreen from a user gesture.
-    document.documentElement.requestFullscreen?.().catch(() => {})
+    // Must run inside the click handler: browsers only allow fullscreen from a user gesture. The lab doesn't
+    // use full screen: candidates need the practice app open in another tab.
+    if (!lab) document.documentElement.requestFullscreen?.().catch(() => {})
     start.mutate()
   }
 
@@ -34,12 +37,22 @@ export function StartExam() {
       <div className="card stack">
         <h1>{exam.title}</h1>
         <div className="facts" style={{ margin: 0 }}>
-          <div className="card"><div className="stat">{exam.questionCount}</div><div className="stat-label">questions</div></div>
+          <div className="card"><div className="stat">{exam.questionCount}</div><div className="stat-label">{lab ? 'tasks' : 'questions'}</div></div>
           <div className="card"><div className="stat">{exam.durationMinutes} min</div><div className="stat-label">time limit</div></div>
           <div className="card"><div className="stat">{exam.passPercent}%</div><div className="stat-label">to pass</div></div>
         </div>
         <div>
           <h2>Before you start</h2>
+          {lab ? (
+          <ul className="clean muted">
+            <li><strong>This uses your attempt.</strong> Once started, the timer keeps running even if you close the browser.</li>
+            <li>Each task describes requirements of a small online shop, the practice app. Write Playwright tests that check them.</li>
+            <li>Open the practice app in another tab to explore it. Use "Run tests" to run a task's tests against it as often as your run allowance lets you.</li>
+            <li>When you submit (or time runs out), your tests must pass on the working app, and they score for each hidden broken version of the app they catch, plus points for good practice: user-facing locators, web-first assertions and no fixed waits.</li>
+            <li>Only @playwright/test can be imported, and tests may only drive the browser and the page.</li>
+            <li>Your code is saved as you type.</li>
+          </ul>
+          ) : (
           <ul className="clean muted">
             <li><strong>This uses your attempt.</strong> Once started, the timer keeps running even if you close the browser.</li>
             <li>Your answers are saved as you go. If you lose connection, reopen the exam from your dashboard to continue.</li>
@@ -48,6 +61,7 @@ export function StartExam() {
             <li>The exam runs in full screen. Leaving the exam tab or window is recorded.</li>
             <li>Use a laptop or desktop with a stable internet connection, in a quiet place.</li>
           </ul>
+          )}
         </div>
         {start.isError && <Alert kind="error">{start.error.message}</Alert>}
         <label className="check">

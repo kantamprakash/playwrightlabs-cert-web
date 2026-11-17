@@ -13,7 +13,8 @@ export type AdminExam = {
   priceInr: number
   retakePriceInr: number | null
   retakeCooldownDays: number
-  kind: 'CERTIFICATION' | 'PRACTICE'
+  kind: 'CERTIFICATION' | 'PRACTICE' | 'LAB'
+  prerequisiteExamId: number | null
   published: boolean
   activeQuestions: number
   /** Why attempts can't be drawn yet (too few questions, or the blueprint doesn't fit); null when ready. */

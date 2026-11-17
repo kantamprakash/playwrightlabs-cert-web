@@ -131,7 +131,7 @@ export function Dashboard() {
 function OfferCard({ offer }: { offer: Offer }) {
   const [buying, setBuying] = useState(false)
   const { exam } = offer
-  const waiting = offer.availableFrom !== null
+  const waiting = offer.availableFrom !== null || offer.lockedReason !== null
 
   return (
     <div className="card stack">
@@ -139,9 +139,10 @@ function OfferCard({ offer }: { offer: Offer }) {
         <div>
           <h3 style={{ marginBottom: 4 }}>{exam.title}{offer.retake && ' – retake'}</h3>
           <div className="faint">
-            {exam.questionCount} questions · {exam.durationMinutes} minutes · Pass mark {exam.passPercent}%
+            {exam.questionCount} {exam.kind === 'LAB' ? 'hands-on tasks' : 'questions'} · {exam.durationMinutes} minutes · Pass mark {exam.passPercent}%
           </div>
-          {waiting && (
+          {offer.lockedReason && <div style={{ color: 'var(--warn)', marginTop: 4 }}>{offer.lockedReason}</div>}
+          {offer.availableFrom && (
             <div style={{ color: 'var(--warn)', marginTop: 4 }}>
               Your retake opens on {formatDate(offer.availableFrom)}. Use the practice test to prepare.
             </div>
@@ -247,6 +248,7 @@ function ExamCard({ access: a, serverTime, minNotice }: { access: ExamAccess; se
             )}
             {a.state === 'READY' && <Link className="btn" to={`/start/${a.entitlementId}`}>Start exam</Link>}
             {a.state === 'IN_PROGRESS' && <Link className="btn" to={`/attempts/${a.attemptId}`}>Resume exam</Link>}
+            {a.state === 'GRADING' && <Link className="btn secondary small" to={`/attempts/${a.attemptId}`}>Grading…</Link>}
             {a.state === 'EXPIRED' && <span className="badge">Access expired</span>}
             {a.state === 'COMPLETED' && (
               <>

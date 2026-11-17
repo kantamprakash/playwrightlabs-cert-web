@@ -10,7 +10,9 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:1.29.8-alpine
 # Where /api/** goes; override with -e API_UPSTREAM=http://gateway:8080. The DNS server used to look it up
 # is read from the container's /etc/resolv.conf (Docker's or the cluster's), see docker/nginx.conf.
+# /practice-app/ goes to LAB_APP_UPSTREAM (the lab exam's practice app).
 ENV API_UPSTREAM=http://api:8080 \
+    LAB_APP_UPSTREAM=http://lab-app:3000 \
     NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /src/dist /usr/share/nginx/html

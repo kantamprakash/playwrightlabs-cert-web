@@ -17,6 +17,7 @@ const EMPTY: ExamForm = {
   retakePriceInr: null,
   retakeCooldownDays: 7,
   kind: 'CERTIFICATION',
+  prerequisiteExamId: null,
   published: false,
 }
 
@@ -29,10 +30,12 @@ export function AdminExams() {
   const { data: exams, isPending } = useAdminExams()
   const [editing, setEditing] = useState<AdminExam | 'new' | null>(null)
   const [blueprintFor, setBlueprintFor] = useState<AdminExam | null>(null)
+  const [tasksFor, setTasksFor] = useState<AdminExam | null>(null)
 
   if (isPending) return <p className="muted">Loading…</p>
   if (editing) return <ExamEditor exam={editing === 'new' ? null : editing} onDone={() => setEditing(null)} />
   if (blueprintFor) return <BlueprintEditor exam={blueprintFor} onDone={() => setBlueprintFor(null)} />
+  if (tasksFor) return <LabTasks exam={tasksFor} onDone={() => setTasksFor(null)} />
 
   return (
     <div className="stack">
@@ -50,6 +53,7 @@ export function AdminExams() {
               {e.title}{' '}
               <span className={`badge ${e.published ? 'green' : ''}`}>{e.published ? 'Published' : 'Draft'}</span>{' '}
               {e.kind === 'PRACTICE' && <span className="badge orange">Practice</span>}
+              {e.kind === 'LAB' && <span className="badge orange">Hands-on lab</span>}
             </h3>
             <div className="faint">
               {e.questionCount} questions per attempt · {e.durationMinutes} min · pass {e.passPercent}%
@@ -61,7 +65,9 @@ export function AdminExams() {
             {e.problem && <div style={{ color: 'var(--warn)' }}>{e.problem}</div>}
           </div>
           <div className="row">
-            <button className="btn secondary small" onClick={() => setBlueprintFor(e)}>Blueprint</button>
+            {e.kind === 'LAB'
+              ? <button className="btn secondary small" onClick={() => setTasksFor(e)}>Tasks</button>
+              : <button className="btn secondary small" onClick={() => setBlueprintFor(e)}>Blueprint</button>}
             <button className="btn secondary small" onClick={() => setEditing(e)}>Edit</button>
           </div>
         </div>
@@ -101,6 +107,7 @@ function PaymentStatus() {
 
 function ExamEditor({ exam, onDone }: { exam: AdminExam | null; onDone: () => void }) {
   const queryClient = useQueryClient()
+  const { data: exams } = useAdminExams()
   const [form, setForm] = useState<ExamForm>(exam ? { ...exam } : EMPTY)
   const save = useMutation({
     mutationFn: () =>
@@ -139,13 +146,25 @@ function ExamEditor({ exam, onDone }: { exam: AdminExam | null; onDone: () => vo
         <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as ExamForm['kind'] })}>
           <option value="CERTIFICATION">Certification exam</option>
           <option value="PRACTICE">Practice test</option>
+          <option value="LAB">Hands-on lab</option>
         </select>
       </Field>
+      {!practice && (
+        <Field label="Requires a pass in" hint="Candidates must pass this exam before they can buy this one.">
+          <select
+            value={form.prerequisiteExamId ?? ''}
+            onChange={(e) => setForm({ ...form, prerequisiteExamId: e.target.value ? Number(e.target.value) : null })}
+          >
+            <option value="">No prerequisite</option>
+            {exams?.filter((x) => x.id !== exam?.id && x.kind !== 'PRACTICE').map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+          </select>
+        </Field>
+      )}
       <div className="grid">
         <Field label="Duration (minutes)" error={fields.durationMinutes}>
           <input type="number" min={5} value={form.durationMinutes} onChange={num('durationMinutes')} />
         </Field>
-        <Field label="Questions per attempt" error={fields.questionCount}>
+        <Field label={form.kind === 'LAB' ? 'Tasks' : 'Questions per attempt'} error={fields.questionCount}>
           <input type="number" min={1} value={form.questionCount} onChange={num('questionCount')} />
         </Field>
         <Field label="Pass mark (%)" error={fields.passPercent}>
@@ -260,6 +279,36 @@ function BlueprintEditor({ exam, onDone }: { exam: AdminExam; onDone: () => void
         </button>
         <button className="btn secondary" onClick={onDone}>Cancel</button>
       </div>
+    </div>
+  )
+}
+
+type AdminLabTask = { id: number; key: string; position: number; title: string; instructions: string; starterCode: string; bugs: string[]; active: boolean }
+
+/** A lab exam's tasks. They are defined with the practice app (playwrightlabs-cert-lab), so this view is read-only. */
+function LabTasks({ exam, onDone }: { exam: AdminExam; onDone: () => void }) {
+  const { data, isPending } = useQuery({
+    queryKey: ['admin', 'lab-tasks', exam.id],
+    queryFn: () => api<AdminLabTask[]>(`/api/admin/exams/${exam.id}/lab-tasks`),
+  })
+  if (isPending) return <p className="muted">Loading…</p>
+  return (
+    <div className="stack" style={{ maxWidth: 820 }}>
+      <div className="spread">
+        <h2 style={{ margin: 0 }}>Lab tasks: {exam.title}</h2>
+        <button className="btn secondary small" onClick={onDone}>Back to exams</button>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>
+        Each task's hidden bugs are broken versions of the practice app, built into the lab image. Candidates never see
+        them. Tasks and bugs are changed in the playwrightlabs-cert-lab repo and a database migration.
+      </p>
+      {data?.map((t) => (
+        <div className="card stack" key={t.id}>
+          <h3 style={{ margin: 0 }}>{t.position}. {t.title} <code className="faint">{t.key}.spec.ts</code></h3>
+          <div className="lab-instructions">{t.instructions}</div>
+          <div><strong>Hidden bugs:</strong> {t.bugs.map((b) => <code key={b} style={{ marginRight: 8 }}>{b}</code>)}</div>
+        </div>
+      ))}
     </div>
   )
 }
