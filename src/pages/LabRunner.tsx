@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { api, ApiError, labLanguage, post, put, type Attempt, type LabRun, type LabTask } from '../api'
 import { Alert } from '../components/Field'
 import { ThemeToggle } from '../components/Layout'
+import { proctor } from '../proctoring'
 
 // Built once per language, so the editor isn't reconfigured on every render.
 const EDITOR = {
@@ -14,8 +15,9 @@ const EDITOR = {
 
 /**
  * The hands-on lab: one test file per task, written in the browser, run against the practice app with
- * "Run tests", and graded in the sandbox after submission. Unlike the multiple-choice exam it doesn't force full
- * screen or record leaving the tab, because candidates need the practice app open in another tab.
+ * "Run tests", and graded in the sandbox after submission. When the exam is proctored the practice app is embedded
+ * in the page (the "Practice app" view), because the candidate must stay in the exam tab, in full screen.
+ * Otherwise it opens in another tab.
  */
 export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinished: () => void }) {
   const lab = attempt.lab!
@@ -28,6 +30,8 @@ export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinishe
   const [runError, setRunError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [view, setView] = useState<'task' | 'app'>('task')
+  const embedded = attempt.proctored
   const dirty = useRef(new Set<number>())
   const remaining = useRemaining(attempt)
   const task = lab.tasks.find((t) => t.id === active) as LabTask
@@ -87,6 +91,9 @@ export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinishe
   async function submit() {
     setSubmitting(true)
     await Promise.all([...dirty.current].map((id) => save(id)))
+    // Stop recording; the last chunks finish uploading in the background (the server accepts them for a few
+    // minutes after submission), so submitting isn't delayed.
+    void proctor.finish()
     try {
       await post(`/api/attempts/${attempt.id}/submit`)
     } finally {
@@ -126,6 +133,7 @@ export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinishe
                 onClick={() => {
                   save(active)
                   setActive(t.id)
+                  setView('task')
                 }}
               >
                 <span>{i + 1}. {t.title}</span>
@@ -135,9 +143,15 @@ export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinishe
               </button>
             ))}
           </nav>
-          <a className="btn secondary block" href={lab.practiceAppUrl} target="_blank" rel="noreferrer">
-            Open the practice app ↗
-          </a>
+          {embedded ? (
+            <button className="btn secondary block" onClick={() => setView(view === 'app' ? 'task' : 'app')}>
+              {view === 'app' ? '← Back to the task' : 'Open the practice app'}
+            </button>
+          ) : (
+            <a className="btn secondary block" href={lab.practiceAppUrl} target="_blank" rel="noreferrer">
+              Open the practice app ↗
+            </a>
+          )}
           <p className="faint" style={{ margin: 0 }}>
             Your tests run with baseURL set to the practice app, so use relative paths such as page.goto('login.html').
             Chromium only. Only @playwright/test can be imported{language.value === 'JAVASCRIPT' ? ', with import (not require)' : ''}.
@@ -145,7 +159,25 @@ export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinishe
           <button className="btn block" onClick={() => setConfirming(true)}>Submit lab</button>
         </aside>
 
-        <section className="stack">
+        {embedded && (
+          // Kept loaded while hidden, so the practice app keeps its state between views.
+          <section className="card tight stack practice-frame" hidden={view !== 'app'}>
+            <div className="spread">
+              <strong>Practice app</strong>
+              <span className="faint">Copying its text into your tests is fine.</span>
+            </div>
+            <iframe
+              src={lab.practiceAppUrl}
+              title="Practice app"
+              onLoad={(e) => {
+                const doc = e.currentTarget.contentDocument
+                if (doc) proctor.guardClipboard(doc)
+              }}
+            />
+          </section>
+        )}
+
+        <section className="stack" hidden={embedded && view === 'app'}>
           <div className="card">
             <h2 style={{ marginTop: 0 }}>{task.title}</h2>
             <div className="lab-instructions">{task.instructions}</div>

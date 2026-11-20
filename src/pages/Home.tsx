@@ -59,7 +59,11 @@ export function Home() {
     },
     {
       q: 'What do I need on the day?',
-      a: 'A laptop or desktop with a recent Chrome, Edge or Firefox and a stable internet connection. You write and run your tests in the browser; nothing to install. Keep the practice shop open in another tab while you work.',
+      a: 'A laptop or desktop with one display, a webcam and microphone, a recent Chrome, Edge or Firefox and a stable internet connection. You write and run your tests in the browser, with the practice shop built into the exam page; nothing to install.',
+    },
+    {
+      q: 'Is the exam proctored?',
+      a: 'Yes. With your agreement, your screen and camera are recorded while the exam is open, and the exam runs in full screen. Switching tabs, pasting text from outside the exam and extra displays are recorded or blocked. An examiner reviews the recording before your certificate is issued, usually within two working days. Recordings are deleted 90 days after the review.',
     },
     {
       q: 'How do employers check my certificate?',

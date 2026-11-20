@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { api, formatDate, post } from '../../api'
+import { Link } from 'react-router'
+import { api, formatDate, post, type ReviewStatus } from '../../api'
 import { Alert } from '../../components/Field'
 
 type AttemptRow = {
@@ -16,6 +17,8 @@ type AttemptRow = {
   passed: boolean | null
   autoSubmitted: boolean
   tabSwitches: number
+  proctored: boolean
+  reviewStatus: ReviewStatus | null
 }
 
 type LabReview = {
@@ -66,6 +69,10 @@ export function AdminAttempts() {
                     <span className="badge orange">In progress</span>
                   ) : a.status === 'GRADING' ? (
                     <span className="badge orange">Grading</span>
+                  ) : a.reviewStatus === 'PENDING' ? (
+                    <span className="badge orange">Waiting for review</span>
+                  ) : a.reviewStatus === 'REJECTED' ? (
+                    <span className="badge red">Rejected</span>
                   ) : a.passed ? (
                     <span className="badge green">Passed</span>
                   ) : (
@@ -73,11 +80,16 @@ export function AdminAttempts() {
                   )}
                 </td>
                 <td style={a.tabSwitches > 3 ? { color: 'var(--warn)', fontWeight: 600 } : undefined}>
-                  {a.examKind === 'LAB' ? '—' : a.tabSwitches}
+                  {a.examKind === 'LAB' && !a.proctored ? '—' : a.tabSwitches}
                 </td>
-                <td>{a.examKind === 'LAB' && a.status !== 'IN_PROGRESS' && (
-                  <button className="btn secondary small" onClick={() => setReviewing(a.id)}>Review code</button>
-                )}</td>
+                <td>
+                  <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                    {a.examKind === 'LAB' && a.status !== 'IN_PROGRESS' && (
+                      <button className="btn secondary small" onClick={() => setReviewing(a.id)}>Review code</button>
+                    )}
+                    {a.proctored && <Link className="btn secondary small" to={`/admin/reviews/${a.id}`}>Session</Link>}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

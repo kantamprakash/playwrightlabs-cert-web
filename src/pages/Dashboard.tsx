@@ -269,9 +269,13 @@ function ExamCard({ access: a, serverTime, minNotice }: { access: ExamAccess; se
             {a.state === 'EXPIRED' && <span className="badge">Access expired</span>}
             {a.state === 'COMPLETED' && (
               <>
-                <span className={`badge ${a.passed ? 'green' : 'red'}`}>
-                  {a.passed ? 'Passed' : 'Not passed'} · {a.scorePercent}%
-                </span>
+                {a.reviewStatus === 'PENDING' ? (
+                  <span className="badge orange" title="An examiner is reviewing your session recording">Under review · {a.scorePercent}%</span>
+                ) : (
+                  <span className={`badge ${a.passed ? 'green' : 'red'}`}>
+                    {a.reviewStatus === 'REJECTED' ? 'No certificate' : a.passed ? 'Passed' : 'Not passed'} · {a.scorePercent}%
+                  </span>
+                )}
                 <Link className="btn secondary small" to={`/attempts/${a.attemptId}`}>View result</Link>
               </>
             )}

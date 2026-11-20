@@ -36,11 +36,18 @@ export function Terms() {
         <li>You must take the exam yourself, without help from anyone else.</li>
         <li>The exam is timed and submitted automatically when time runs out.</li>
         <li>The exam runs in full screen. Leaving the exam window is recorded and may be reviewed.</li>
+        <li>
+          Certification exams are proctored: your entire screen and your camera (with microphone) are recorded for the
+          whole exam, pasting text copied from outside the exam is blocked, and leaving the exam tab or full screen is
+          recorded. Take the exam alone, on one display, without phones, notes or other devices.
+        </li>
         <li>Do not copy, share or publish exam questions.</li>
       </ul>
       <h2>Results and certificates</h2>
       <p>
-        Results are shown when you submit. A certificate is issued when you reach the pass mark. {BUSINESS} may
+        Results are shown when you submit. A certificate is issued when you reach the pass mark and, for a proctored
+        exam, once an examiner has reviewed your session recording, usually within two working days. If the examiner
+        finds the exam rules were broken, no certificate is issued and the attempt counts as not passed. {BUSINESS} may
         revoke a certificate if it finds the exam rules were broken; a revoked certificate shows as revoked on the
         public verification page.
       </p>
@@ -111,13 +118,19 @@ export function Privacy() {
       <ul>
         <li>Your name and email address, to run your account and print your certificate.</li>
         <li>Your exam bookings, answers, scores and the number of times you left the exam window.</li>
+        <li>
+          For proctored exams: a recording of your screen and of your camera and microphone during the exam, and a log
+          of what the exam page noticed (leaving the tab or full screen, blocked pastes, extra displays). We record only
+          while the exam is open, and only after you agree to it on the start page.
+        </li>
         <li>Payment records: amount, date and Razorpay's payment reference. Card and bank details stay with Razorpay.</li>
         <li>Technical logs (such as IP address and browser) kept for security and troubleshooting.</li>
       </ul>
       <h2>How we use it</h2>
       <p>
         To run exams, issue and verify certificates, send emails about your exams and payments, issue invoices, and
-        prevent cheating and fraud. We don't sell your data or use it for advertising.
+        prevent cheating and fraud. Session recordings are watched only by our examiners, to check the exam rules were
+        followed. We don't sell your data or use it for advertising.
       </p>
       <h2>What is public</h2>
       <p>
@@ -126,7 +139,8 @@ export function Privacy() {
       </p>
       <h2>How long we keep it</h2>
       <p>
-        Certificates and the records behind them are kept so they can be verified. Invoices and payment records are
+        Certificates and the records behind them are kept so they can be verified. Session recordings are deleted 90
+        days after the examiner's review. Invoices and payment records are
         kept for as long as tax law requires.
       </p>
       <h2>Your choices</h2>

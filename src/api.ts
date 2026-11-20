@@ -100,7 +100,12 @@ export type ExamSummary = {
   priceUsd: number | null
   retakePriceUsd: number | null
   retakeCooldownDays: number
+  /** Recorded (screen and camera) and monitored; certificates wait for an admin's review. */
+  proctored: boolean
 }
+
+/** The proctoring review of a result that earns a certificate; null when none is needed. */
+export type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 /** The language a certification exam is taken in, chosen at checkout: a lab's test files, or which questions. */
 export type LabLanguage = 'TYPESCRIPT' | 'JAVASCRIPT'
@@ -224,6 +229,7 @@ export type ExamAccess = {
   passed: boolean | null
   /** The exam's language (TypeScript or JavaScript); null for practice tests. */
   labLanguage: LabLanguage | null
+  reviewStatus: ReviewStatus | null
 }
 
 /** certified=false is a certificate of participation (issued below the pass mark). */
@@ -267,6 +273,9 @@ export type AttemptResult = {
   topics: { topic: string; correct: number; total: number }[]
   /** Practice tests only: every question with the right answer and explanation. */
   review: ReviewItem[] | null
+  reviewStatus: ReviewStatus | null
+  /** The examiner's reason, when the session was rejected. */
+  reviewNote: string | null
 }
 
 export type ReviewItem = {
@@ -338,6 +347,8 @@ export type Attempt = {
   questions: AttemptQuestion[]
   result: AttemptResult | null
   lab: LabView | null
+  /** The exam is proctored: the page runs the security check and records the session. */
+  proctored: boolean
 }
 
 export type Verification = {

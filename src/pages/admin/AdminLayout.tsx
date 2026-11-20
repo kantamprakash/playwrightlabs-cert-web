@@ -19,6 +19,8 @@ export type AdminExam = {
   kind: 'CERTIFICATION' | 'PRACTICE' | 'LAB'
   prerequisiteExamId: number | null
   published: boolean
+  /** Recorded and monitored; certificates wait for a session review. */
+  proctored: boolean
   activeQuestions: number
   /** Why attempts can't be drawn yet (too few questions, or the blueprint doesn't fit); null when ready. */
   problem: string | null
@@ -37,6 +39,7 @@ export function AdminLayout() {
         <NavLink to="/admin/questions">Question bank</NavLink>
         <NavLink to="/admin/access">Candidates &amp; access</NavLink>
         <NavLink to="/admin/attempts">Attempts</NavLink>
+        <NavLink to="/admin/reviews">Session reviews</NavLink>
         <NavLink to="/admin/certificates">Certificates</NavLink>
         <NavLink to="/admin/sales">Orders &amp; coupons</NavLink>
         <NavLink to="/admin/audit">Audit log</NavLink>

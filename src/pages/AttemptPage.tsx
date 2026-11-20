@@ -4,6 +4,8 @@ import { Link, useParams } from 'react-router'
 import { api, ApiError, formatDate, post, put, type Attempt, type AttemptQuestion, type ReviewItem } from '../api'
 import { Alert } from '../components/Field'
 import { ThemeToggle } from '../components/Layout'
+import { ProctorGate } from '../components/Proctoring'
+import { proctor } from '../proctoring'
 import { LabGrading, LabRunner } from './LabRunner'
 
 export function AttemptPage() {
@@ -17,6 +19,8 @@ export function AttemptPage() {
   const { refetch } = query
   // Kept stable so the runner's save and timer effects aren't torn down on every render.
   const finished = useCallback(() => {
+    // Stops recording and uploads the rest (when time ran out, or after submitting).
+    proctor.finish()
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     refetch()
@@ -34,8 +38,10 @@ export function AttemptPage() {
   const attempt = query.data
   if (attempt.status === 'COMPLETED') return <ResultView attempt={attempt} />
   if (attempt.status === 'GRADING') return <LabGrading attempt={attempt} onRefresh={refetch} />
-  if (attempt.kind === 'LAB') return <LabRunner attempt={attempt} onFinished={finished} />
-  return <ExamRunner attempt={attempt} onFinished={finished} />
+  const runner = attempt.kind === 'LAB'
+    ? <LabRunner attempt={attempt} onFinished={finished} />
+    : <ExamRunner attempt={attempt} onFinished={finished} />
+  return attempt.proctored ? <ProctorGate attempt={attempt}>{runner}</ProctorGate> : runner
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -100,6 +106,9 @@ function ExamRunner({ attempt, onFinished }: { attempt: Attempt; onFinished: () 
   const submit = useCallback(async () => {
     setSubmitting(true)
     await flush()
+    // Stop recording; the last chunks finish uploading in the background (the server accepts them for a few
+    // minutes after submission), so submitting isn't delayed.
+    void proctor.finish()
     try {
       await post(`/api/attempts/${id}/submit`)
     } catch {
@@ -131,16 +140,17 @@ function ExamRunner({ attempt, onFinished }: { attempt: Attempt; onFinished: () 
     return () => clearTimeout(t)
   }, [saveState, flush])
 
-  // Record leaving the tab or window.
+  // Record leaving the tab or window. A proctored exam reports it with its other events.
+  const proctored = attempt.proctored
   useEffect(() => {
     const onHidden = () => {
       if (document.visibilityState !== 'hidden') return
       setFocusLosses((n) => n + 1)
-      post(`/api/attempts/${id}/focus-lost`).catch(() => {})
+      if (!proctored) post(`/api/attempts/${id}/focus-lost`).catch(() => {})
     }
     document.addEventListener('visibilitychange', onHidden)
     return () => document.removeEventListener('visibilitychange', onHidden)
-  }, [id])
+  }, [id, proctored])
 
   // Warn before closing or reloading the tab.
   useEffect(() => {
@@ -332,13 +342,17 @@ function ResultView({ attempt }: { attempt: Attempt }) {
       </header>
       <main className="container page stack" style={{ maxWidth: 760 }}>
         <div className="card stack" style={{ textAlign: 'center' }}>
-          <div className={`badge ${r.passed ? 'green' : 'red'}`} style={{ alignSelf: 'center' }}>
-            {attempt.practice ? 'Practice test · ' : ''}{r.passed ? 'Passed' : 'Not passed'}
-          </div>
+          {r.reviewStatus === 'PENDING' ? (
+            <div className="badge orange" style={{ alignSelf: 'center' }}>Under review</div>
+          ) : (
+            <div className={`badge ${r.passed ? 'green' : 'red'}`} style={{ alignSelf: 'center' }}>
+              {attempt.practice ? 'Practice test · ' : ''}{r.reviewStatus === 'REJECTED' ? 'No certificate' : r.passed ? 'Passed' : 'Not passed'}
+            </div>
+          )}
           <h1>
             {attempt.practice
               ? r.passed ? 'Well done!' : 'Keep practising'
-              : r.passed ? 'Congratulations!' : 'Thank you for taking the exam'}
+              : r.passed && r.reviewStatus !== 'PENDING' ? 'Congratulations!' : 'Thank you for taking the exam'}
           </h1>
           <p className="muted">
             {attempt.examTitle} · submitted {formatDate(r.submittedAt, true)}
@@ -349,6 +363,18 @@ function ResultView({ attempt }: { attempt: Attempt }) {
             <div className="card"><div className="stat">{r.correctCount}/{attempt.totalQuestions}</div><div className="stat-label">correct</div></div>
             <div className="card"><div className="stat">{attempt.passPercent}%</div><div className="stat-label">pass mark</div></div>
           </div>
+          {r.reviewStatus === 'PENDING' && (
+            <Alert kind="warn">
+              An examiner is reviewing the recording of your exam session to confirm the exam rules were followed.
+              Your certificate is issued as soon as that’s done, usually within two working days. We’ll email you.
+            </Alert>
+          )}
+          {r.reviewStatus === 'REJECTED' && (
+            <Alert kind="error">
+              The examiner found that the exam rules weren’t followed, so no certificate is issued for this attempt
+              {r.reviewNote && <>: {r.reviewNote}</>}. You can book a retake from your <Link to="/dashboard">dashboard</Link> when it opens.
+            </Alert>
+          )}
           {r.certificateNo && (
             <div className="row" style={{ justifyContent: 'center' }}>
               <a className="btn" href={`/api/me/certificates/${r.certificateNo}/pdf`} download>
@@ -362,7 +388,7 @@ function ResultView({ attempt }: { attempt: Attempt }) {
               <Link className="btn" to="/dashboard">Back to dashboard</Link>
               <a className="btn secondary" href="#review">Review your answers</a>
             </div>
-          ) : !r.passed && (
+          ) : !r.passed && r.reviewStatus !== 'REJECTED' && (
             <p className="muted" style={{ marginBottom: 0 }}>
               The topic breakdown below shows where to focus. When your retake opens, you can book it
               from your <Link to="/dashboard">dashboard</Link>; the free practice test there is a good way to

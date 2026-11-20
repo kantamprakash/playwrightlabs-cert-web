@@ -21,6 +21,7 @@ const EMPTY: ExamForm = {
   kind: 'CERTIFICATION',
   prerequisiteExamId: null,
   published: false,
+  proctored: true,
 }
 
 type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
@@ -56,6 +57,7 @@ export function AdminExams() {
               <span className={`badge ${e.published ? 'green' : ''}`}>{e.published ? 'Published' : 'Draft'}</span>{' '}
               {e.kind === 'PRACTICE' && <span className="badge orange">Practice</span>}
               {e.kind === 'LAB' && <span className="badge orange">Hands-on lab</span>}
+              {e.proctored && e.kind !== 'PRACTICE' && <> <span className="badge">Proctored</span></>}
             </h3>
             <div className="faint">
               {e.questionCount} questions per attempt · {e.durationMinutes} min · pass {e.passPercent}%
@@ -212,6 +214,15 @@ function ExamEditor({ exam, onDone }: { exam: AdminExam | null; onDone: () => vo
           </>
         )}
       </div>
+      {!practice && (
+        <label className="check" style={{ marginBottom: 12 }}>
+          <input type="checkbox" checked={form.proctored} onChange={(e) => setForm({ ...form, proctored: e.target.checked })} />
+          <span>
+            Proctored: record the candidate’s screen and camera, block outside pastes and require full screen. Each
+            certificate is issued only after you approve the session under Session reviews.
+          </span>
+        </label>
+      )}
       <label className="check" style={{ marginBottom: 16 }}>
         <input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} />
         <span>Published: {practice ? 'candidates can start this practice test' : 'candidates can buy and take this exam'}</span>

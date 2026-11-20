@@ -23,6 +23,7 @@ import { AdminExams } from './pages/admin/AdminExams'
 import { AdminQuestions } from './pages/admin/AdminQuestions'
 import { AdminAudit } from './pages/admin/AdminAudit'
 import { AdminSales } from './pages/admin/AdminSales'
+import { AdminReviews, AdminSessionReview } from './pages/admin/AdminReviews'
 import './styles.css'
 
 const queryClient = new QueryClient({
@@ -55,6 +56,8 @@ const router = createBrowserRouter([
           { path: 'questions', element: <AdminQuestions /> },
           { path: 'access', element: <AdminAccess /> },
           { path: 'attempts', element: <AdminAttempts /> },
+          { path: 'reviews', element: <AdminReviews /> },
+          { path: 'reviews/:attemptId', element: <AdminSessionReview /> },
           { path: 'certificates', element: <AdminCertificates /> },
           { path: 'sales', element: <AdminSales /> },
           { path: 'audit', element: <AdminAudit /> },
