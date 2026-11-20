@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { post, rupees, type CheckoutResult, type LabLanguage, type Offer, type Quote } from '../api'
+import { guessCurrency, money, post, price, type CheckoutResult, type Currency, type LabLanguage, type Offer, type Quote } from '../api'
 import { Alert } from './Field'
 import { LanguagePicker } from './LanguagePicker'
 
@@ -47,20 +47,24 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
   const isLab = offer.exam.kind === 'LAB'
   const hasLanguage = offer.exam.kind !== 'PRACTICE'
   const [language, setLanguage] = useState<LabLanguage>('TYPESCRIPT')
+  const sellsUsd = offer.priceUsd != null
+  const [currency, setCurrency] = useState<Currency>(() => (sellsUsd ? guessCurrency() : 'INR'))
   const [code, setCode] = useState('')
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
   // Test mode: the order waiting for the simulated payment step.
-  const [mockOrder, setMockOrder] = useState<{ id: string; amountPaise: number } | null>(null)
+  const [mockOrder, setMockOrder] = useState<{ id: string; amountPaise: number; currency: Currency } | null>(null)
 
   // The last valid price; a rejected coupon shows an error but keeps it.
   const [q, setQ] = useState<Quote>()
   const quote = useMutation({
-    mutationFn: (couponCode: string) => post<Quote>(`/api/exams/${slug}/quote`, { couponCode }),
+    mutationFn: (couponCode: string) => post<Quote>(`/api/exams/${slug}/quote`, { couponCode, currency }),
     onSuccess: setQ,
   })
   const { mutate: getQuote } = quote
-  useEffect(() => getQuote(''), [getQuote])
+  // A new price whenever the currency changes, keeping any applied coupon.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => getQuote(q?.couponCode ?? ''), [getQuote, currency])
 
   const finished = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
@@ -71,6 +75,7 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
   const checkout = useMutation({
     mutationFn: () => post<CheckoutResult>(`/api/exams/${slug}/checkout`, {
         couponCode: q?.couponCode ?? '',
+        currency,
         ...(hasLanguage ? { language } : {}),
       }),
     onSuccess: async (res) => {
@@ -78,7 +83,7 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
       const p = res.payment
       setPayError(null)
       if (p.mock) {
-        setMockOrder({ id: p.razorpayOrderId, amountPaise: p.amountPaise })
+        setMockOrder({ id: p.razorpayOrderId, amountPaise: p.amountPaise, currency: p.currency })
         return
       }
       try {
@@ -134,7 +139,7 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
         </Alert>
         <div className="price-lines">
           <span className="total">Amount</span>
-          <span className="total">{rupees(mockOrder.amountPaise / 100)}</span>
+          <span className="total">{money(mockOrder.amountPaise, mockOrder.currency)}</span>
         </div>
         {mockPay.isError && <Alert kind="error">{mockPay.error.message}</Alert>}
         {payError && <Alert kind="error">{payError}</Alert>}
@@ -161,18 +166,38 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
         <LanguagePicker name={`language-${slug}`} value={language} onChange={setLanguage} disabled={busy} lab={isLab} />
       )}
 
+      {sellsUsd && (
+        <fieldset className="language-picker" disabled={busy}>
+          <legend>Paying from</legend>
+          <div className="options" role="radiogroup">
+            {([
+              ['INR', 'India', `${price(offer.priceInr, 'INR')} incl. GST · UPI, cards, net banking`],
+              ['USD', 'Outside India', `${price(offer.priceUsd!, 'USD')} · international cards`],
+            ] as const).map(([value, label, detail]) => (
+              <label key={value} className={`option ${currency === value ? 'selected' : ''}`}>
+                <input type="radio" name={`currency-${slug}`} checked={currency === value} onChange={() => setCurrency(value)} />
+                <span>
+                  <strong>{label}</strong>
+                  <span className="faint"> · {detail}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
       {q && (
         <div className="price-lines">
           <span>{q.retake ? 'Retake' : 'Certification exam'}</span>
-          <span>{rupees(q.listPriceInr)}</span>
-          {q.discountInr > 0 && (
+          <span>{price(q.listPrice, q.currency)}</span>
+          {q.discount > 0 && (
             <>
               <span>Coupon {q.couponCode}</span>
-              <span>−{rupees(q.discountInr)}</span>
+              <span>−{price(q.discount, q.currency)}</span>
             </>
           )}
-          <span className="total">Total (incl. GST)</span>
-          <span className="total">{rupees(q.totalInr)}</span>
+          <span className="total">{q.currency === 'INR' ? 'Total (incl. GST)' : 'Total (no Indian GST)'}</span>
+          <span className="total">{price(q.total, q.currency)}</span>
         </div>
       )}
 
@@ -198,22 +223,22 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
       {quote.isError && <Alert kind="error">{quote.error.message}</Alert>}
       {checkout.isError && <Alert kind="error">{checkout.error.message}</Alert>}
       {payError && <Alert kind="error">{payError}</Alert>}
-      {q && q.totalInr > 0 && !q.onlinePaymentAvailable && (
+      {q && q.total > 0 && !q.onlinePaymentAvailable && (
         <Alert kind="warn">Online payment opens soon. Contact Playwright Labs to enrol in the meantime.</Alert>
       )}
 
       <div className="row">
         <button
           className="btn"
-          disabled={!q || busy || (q.totalInr > 0 && !q.onlinePaymentAvailable)}
+          disabled={!q || busy || quote.isPending || (q.total > 0 && !q.onlinePaymentAvailable)}
           onClick={() => checkout.mutate()}
         >
-          {busy ? 'Processing…' : q && q.totalInr === 0 ? 'Enrol for free' : `Pay ${q ? rupees(q.totalInr) : ''}`}
+          {busy ? 'Processing…' : q && q.total === 0 ? 'Enrol for free' : `Pay ${q ? price(q.total, q.currency) : ''}`}
         </button>
         <button className="btn secondary" disabled={busy} onClick={onCancel}>Cancel</button>
       </div>
       <p className="faint" style={{ margin: 0 }}>
-        Payments are handled securely by Razorpay (UPI, cards, net banking). After paying, choose your exam time from
+        Payments are handled securely by Razorpay ({currency === 'INR' ? 'UPI, cards, net banking' : 'international cards'}). After paying, choose your exam time from
         this dashboard. See our <a href="/refund-policy" target="_blank">refund policy</a>.
       </p>
     </div>

@@ -82,7 +82,10 @@ export function formatDate(iso: string | null | undefined, withTime = false): st
 
 export type User = { id: number; email: string; fullName: string; role: 'CANDIDATE' | 'ADMIN' }
 
-/** Prices include GST. retakePriceInr applies after a failed attempt. */
+/**
+ * INR prices include GST. USD prices are for candidates outside India (no GST); null when the exam isn't sold in
+ * USD. Retake prices apply after a failed attempt.
+ */
 export type ExamSummary = {
   id: number
   slug: string
@@ -94,6 +97,8 @@ export type ExamSummary = {
   passPercent: number
   priceInr: number
   retakePriceInr: number
+  priceUsd: number | null
+  retakePriceUsd: number | null
   retakeCooldownDays: number
 }
 
@@ -114,9 +119,47 @@ export function rupees(amount: number): string {
   return '₹' + amount.toLocaleString('en-IN')
 }
 
+/** INR for candidates in India (with GST), USD for everyone else. */
+export type Currency = 'INR' | 'USD'
+
+/** A whole-unit price, e.g. "₹4,999" or "US$59". */
+export function price(amount: number, currency: Currency): string {
+  return currency === 'USD' ? 'US$' + amount.toLocaleString('en-US') : rupees(amount)
+}
+
+/** An order amount in minor units (paise or cents), e.g. "US$59" or "US$59.50". */
+export function money(minor: number, currency: Currency = 'INR'): string {
+  const whole = minor / 100
+  return currency === 'USD'
+    ? 'US$' + whole.toLocaleString('en-US', { minimumFractionDigits: minor % 100 ? 2 : 0 })
+    : '₹' + whole.toLocaleString('en-IN', { minimumFractionDigits: minor % 100 ? 2 : 0 })
+}
+
+/** A first guess at the candidate's currency from their time zone; they can change it at checkout. */
+export function guessCurrency(): Currency {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    return zone === 'Asia/Kolkata' || zone === 'Asia/Calcutta' ? 'INR' : 'USD'
+  } catch {
+    return 'INR'
+  }
+}
+
+/** "₹4,999 · US$59" when the exam is also sold in USD. */
+export function bothPrices(inr: number, usd: number | null): string {
+  return usd == null ? rupees(inr) : `${rupees(inr)} · ${price(usd, 'USD')}`
+}
+
 /** A certification the candidate can buy now (availableFrom null) or later (a retake still in its wait). */
 /** lockedReason: the candidate can't buy it yet, e.g. a prerequisite exam isn't passed. */
-export type Offer = { exam: ExamSummary; retake: boolean; priceInr: number; availableFrom: string | null; lockedReason: string | null }
+export type Offer = {
+  exam: ExamSummary
+  retake: boolean
+  priceInr: number
+  priceUsd: number | null
+  availableFrom: string | null
+  lockedReason: string | null
+}
 
 export type PracticeResult = {
   attemptId: number
@@ -131,9 +174,11 @@ export type Quote = {
   examSlug: string
   examTitle: string
   retake: boolean
-  listPriceInr: number
-  discountInr: number
-  totalInr: number
+  /** Whole units of the currency. */
+  currency: Currency
+  listPrice: number
+  discount: number
+  total: number
   couponCode: string | null
   onlinePaymentAvailable: boolean
 }
@@ -144,8 +189,9 @@ export type CheckoutResult = {
   payment: {
     keyId: string
     razorpayOrderId: string
+    /** Minor units (paise or cents). */
     amountPaise: number
-    currency: string
+    currency: Currency
     description: string
     buyerName: string
     buyerEmail: string
@@ -158,6 +204,8 @@ export type OrderView = {
   id: number
   examTitle: string
   retake: boolean
+  currency: Currency
+  /** Minor units (paise or cents). */
   amountPaise: number
   invoiceNo: string | null
   paidAt: string

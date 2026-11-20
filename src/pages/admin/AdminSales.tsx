@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { api, ApiError, formatDate, rupees } from '../../api'
+import { api, ApiError, formatDate, money, type Currency } from '../../api'
 import { Alert, Field } from '../../components/Field'
 import { useAdminExams } from './AdminLayout'
 
@@ -24,6 +24,8 @@ type OrderRow = {
   buyerEmail: string
   examTitle: string
   retake: boolean
+  currency: Currency
+  /** Minor units (paise or cents). */
   listPricePaise: number
   discountPaise: number
   amountPaise: number
@@ -51,7 +53,8 @@ export function AdminSales() {
   const { data: orders, isPending } = useQuery({ queryKey: ['admin', 'orders'], queryFn: () => api<OrderRow[]>('/api/admin/orders') })
   // Simulated (mock) payments don't count as revenue.
   const paid = (orders ?? []).filter((o) => o.status === 'PAID' && !o.razorpayPaymentId?.startsWith('pay_mock_'))
-  const revenue = paid.reduce((sum, o) => sum + o.amountPaise, 0)
+  const revenue = (c: Currency) => paid.filter((o) => o.currency === c).reduce((sum, o) => sum + o.amountPaise, 0)
+  const usd = revenue('USD')
 
   return (
     <div className="stack">
@@ -61,7 +64,7 @@ export function AdminSales() {
         <div className="spread">
           <h2 style={{ margin: 0 }}>Orders</h2>
           <span className="faint">
-            {paid.length} paid · {rupees(revenue / 100)} received (last 500 orders)
+            {paid.length} paid · {money(revenue('INR'), 'INR')}{usd > 0 && ` + ${money(usd, 'USD')}`} received (last 500 orders)
           </span>
         </div>
         <p className="muted" style={{ margin: 0 }}>
@@ -83,8 +86,8 @@ export function AdminSales() {
                     <td>{o.buyerName}<div className="faint">{o.buyerEmail}</div></td>
                     <td>{o.examTitle}{o.retake && ' (retake)'}</td>
                     <td>
-                      {rupees(o.amountPaise / 100)}
-                      {o.discountPaise > 0 && <div className="faint">list {rupees(o.listPricePaise / 100)}</div>}
+                      {money(o.amountPaise, o.currency)}
+                      {o.discountPaise > 0 && <div className="faint">list {money(o.listPricePaise, o.currency)}</div>}
                     </td>
                     <td>{o.couponCode ?? '—'}</td>
                     <td>

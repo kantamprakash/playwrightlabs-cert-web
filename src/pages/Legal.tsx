@@ -50,7 +50,8 @@ export function Terms() {
       </p>
       <h2>Pricing</h2>
       <p>
-        Prices are in Indian rupees and include GST. Payments are processed by Razorpay; {BUSINESS} does not see or
+        Candidates in India pay in Indian rupees, including GST. Candidates outside India pay in US dollars, without
+        Indian GST. Payments are processed by Razorpay; {BUSINESS} does not see or
         store your card or bank details.
       </p>
       <h2>Liability</h2>

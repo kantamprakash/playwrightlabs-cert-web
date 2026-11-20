@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import {
-  api, formatDate, formatDateTime, labLanguage, post, put, rupees,
+  api, bothPrices, formatDate, formatDateTime, labLanguage, money, post, put,
   type Dashboard as DashboardData, type ExamAccess, type LabLanguage, type ExamSummary, type Offer, type OrderView, type PracticeResult,
 } from '../api'
 import { useMe } from '../auth'
@@ -114,7 +114,7 @@ export function Dashboard() {
                       <tr key={o.id}>
                         <td>{formatDate(o.paidAt)}</td>
                         <td>{o.examTitle}{o.retake && ' (retake)'}</td>
-                        <td>{rupees(o.amountPaise / 100)}</td>
+                        <td>{money(o.amountPaise, o.currency)}</td>
                         <td><a href={`/api/me/orders/${o.id}/invoice`} download>{o.invoiceNo}</a></td>
                       </tr>
                     ))}
@@ -145,13 +145,13 @@ function OfferCard({ offer }: { offer: Offer }) {
           {offer.lockedReason && <div style={{ color: 'var(--warn)', marginTop: 4 }}>{offer.lockedReason}</div>}
           {offer.availableFrom && (
             <div style={{ color: 'var(--warn)', marginTop: 4 }}>
-              Your retake opens on {formatDate(offer.availableFrom)}. Use the practice test to prepare.
+              Your retake opens on {formatDate(offer.availableFrom)}.
             </div>
           )}
         </div>
         {!buying && (
           <div className="row">
-            <span className="badge">{rupees(offer.priceInr)} incl. GST</span>
+            <span className="badge">{bothPrices(offer.priceInr, offer.priceUsd)}</span>
             <button className="btn" disabled={waiting} onClick={() => setBuying(true)}>
               {offer.retake ? 'Book retake' : 'Enrol now'}
             </button>

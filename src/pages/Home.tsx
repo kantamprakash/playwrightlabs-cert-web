@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { api, rupees, type ExamSummary } from '../api'
+import { api, bothPrices, price, rupees, type ExamSummary } from '../api'
 import { useMe } from '../auth'
 
 const SKILLS = [
@@ -22,7 +22,7 @@ export function Home() {
   const steps = [
     {
       title: '1. Register and enrol',
-      text: `Create an account and verify your email. Pay ${exam ? rupees(exam.priceInr) : 'the exam fee'} online by UPI, card or net banking, and choose TypeScript or JavaScript.`,
+      text: `Create an account and verify your email. Pay ${exam ? bothPrices(exam.priceInr, exam.priceUsd) : 'the exam fee'} online (UPI, card or net banking in India; international cards elsewhere), and choose TypeScript or JavaScript.`,
     },
     {
       title: '2. Book and take the lab',
@@ -50,7 +50,7 @@ export function Home() {
     {
       q: 'What happens if I don’t pass?',
       a: exam
-        ? `You see a score and feedback for every task so you know what to work on. You can book a retake ${exam.retakeCooldownDays} days later, for ${rupees(exam.retakePriceInr)}.`
+        ? `You see a score and feedback for every task so you know what to work on. You can book a retake ${exam.retakeCooldownDays} days later, for ${bothPrices(exam.retakePriceInr, exam.retakePriceUsd)}.`
         : 'You see a score and feedback for every task, and you can book a retake after a short wait.',
     },
     {
@@ -64,6 +64,12 @@ export function Home() {
     {
       q: 'How do employers check my certificate?',
       a: 'Every certificate has a unique credential ID and QR code. Anyone can confirm it on the Verify page of this site.',
+    },
+    {
+      q: 'Can I pay from outside India?',
+      a: exam?.priceUsd != null
+        ? `Yes. Candidates outside India pay ${price(exam.priceUsd, 'USD')} by international card, with no Indian GST.`
+        : 'Payment is in Indian rupees for now. Contact us if you are outside India.',
     },
     {
       q: 'Do I get an invoice?',
@@ -85,7 +91,7 @@ export function Home() {
           </p>
           <div className="row">
             <Link className="btn lg" to={cta}>
-              {exam ? `Enrol for ${rupees(exam.priceInr)}` : me ? 'Go to your dashboard' : 'Register'}
+              {exam ? `Enrol for ${bothPrices(exam.priceInr, exam.priceUsd)}` : me ? 'Go to your dashboard' : 'Register'}
             </Link>
             {!me && <Link className="btn secondary lg" to="/login">Sign in</Link>}
           </div>
@@ -104,7 +110,7 @@ export function Home() {
 
         {isPending ? null : exam ? (
           <div className="facts" style={{ margin: 0 }}>
-            <Fact value={rupees(exam.priceInr)} label="incl. GST" />
+            <Fact value={rupees(exam.priceInr)} label={exam.priceUsd == null ? 'incl. GST' : `incl. GST · ${price(exam.priceUsd, 'USD')} outside India`} />
             <Fact value={`${exam.questionCount}`} label="hands-on tasks" />
             <Fact value={`${exam.durationMinutes} min`} label="time limit" />
             <Fact value={`${exam.passPercent}%`} label="to pass" />
@@ -129,7 +135,7 @@ Time        ${exam?.durationMinutes ?? 120} minutes, auto-submitted
 Language    TypeScript or JavaScript
 Pass mark   ${exam?.passPercent ?? 70}%
 Result      task scores and feedback after grading
-Retake      after ${exam?.retakeCooldownDays ?? 7} days${exam ? `, ${rupees(exam.retakePriceInr)}` : ''}`}</code></pre>
+Retake      after ${exam?.retakeCooldownDays ?? 7} days${exam ? `, ${bothPrices(exam.retakePriceInr, exam.retakePriceUsd)}` : ''}`}</code></pre>
             <p>Each task asks you to test part of the Labs Shop: signing in, the cart, coupons and checkout. Run your tests against the shop as you go; your saved code is graded when you submit.</p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { api, ApiError, rupees } from '../../api'
+import { api, ApiError, price, rupees } from '../../api'
 import { Alert, Field } from '../../components/Field'
 import { useAdminExams, type AdminExam } from './AdminLayout'
 
@@ -15,6 +15,8 @@ const EMPTY: ExamForm = {
   passPercent: 70,
   priceInr: 0,
   retakePriceInr: null,
+  priceUsd: null,
+  retakePriceUsd: null,
   retakeCooldownDays: 7,
   kind: 'CERTIFICATION',
   prerequisiteExamId: null,
@@ -57,8 +59,12 @@ export function AdminExams() {
             </h3>
             <div className="faint">
               {e.questionCount} questions per attempt · {e.durationMinutes} min · pass {e.passPercent}%
-              {e.kind === 'CERTIFICATION' && (
-                <> · {rupees(e.priceInr)} · retake {rupees(e.retakePriceInr ?? e.priceInr)} after {e.retakeCooldownDays} days</>
+              {e.kind !== 'PRACTICE' && (
+                <>
+                  {' '}· {rupees(e.priceInr)} · retake {rupees(e.retakePriceInr ?? e.priceInr)}
+                  {e.priceUsd != null && <> · {price(e.priceUsd, 'USD')} · retake {price(e.retakePriceUsd ?? e.priceUsd, 'USD')}</>}
+                  {' '}· retake after {e.retakeCooldownDays} days
+                </>
               )}
             </div>
             <div className="faint">{e.activeQuestions} active questions in the bank</div>
@@ -181,6 +187,23 @@ function ExamEditor({ exam, onDone }: { exam: AdminExam | null; onDone: () => vo
                 min={0}
                 value={form.retakePriceInr ?? ''}
                 onChange={(e) => setForm({ ...form, retakePriceInr: e.target.value === '' ? null : Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="Price outside India (US$)" hint="No GST. Blank: not sold in USD." error={fields.priceUsd}>
+              <input
+                type="number"
+                min={0}
+                value={form.priceUsd ?? ''}
+                onChange={(e) => setForm({ ...form, priceUsd: e.target.value === '' ? null : Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="Retake price (US$)" hint="Blank: same as the USD price." error={fields.retakePriceUsd}>
+              <input
+                type="number"
+                min={0}
+                disabled={form.priceUsd == null}
+                value={form.retakePriceUsd ?? ''}
+                onChange={(e) => setForm({ ...form, retakePriceUsd: e.target.value === '' ? null : Number(e.target.value) })}
               />
             </Field>
             <Field label="Days before a retake" error={fields.retakeCooldownDays}>

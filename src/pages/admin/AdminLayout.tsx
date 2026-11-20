@@ -12,6 +12,9 @@ export type AdminExam = {
   passPercent: number
   priceInr: number
   retakePriceInr: number | null
+  /** Whole US dollars for candidates outside India; null: not sold in USD. */
+  priceUsd: number | null
+  retakePriceUsd: number | null
   retakeCooldownDays: number
   kind: 'CERTIFICATION' | 'PRACTICE' | 'LAB'
   prerequisiteExamId: number | null
