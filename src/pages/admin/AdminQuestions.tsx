@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { api, ApiError } from '../../api'
+import { api, ApiError, labLanguage, type LabLanguage } from '../../api'
 import { Alert, Field } from '../../components/Field'
 import { useAdminExams } from './AdminLayout'
 
@@ -15,6 +15,8 @@ type Question = {
   difficulty: Difficulty
   text: string
   codeSnippet: string | null
+  /** Only drawn for candidates taking the exam in this language; null for every language. */
+  language: LabLanguage | null
   explanation: string | null
   active: boolean
   options: Option[]
@@ -27,6 +29,7 @@ const NEW_QUESTION: QuestionForm = {
   difficulty: 'MEDIUM',
   text: '',
   codeSnippet: '',
+  language: null,
   explanation: '',
   active: true,
   options: [
@@ -104,7 +107,10 @@ export function AdminQuestions() {
               {shown.map((q) => (
                 <tr key={q.id} style={q.active ? undefined : { opacity: 0.55 }}>
                   <td className="faint">{q.id}</td>
-                  <td>{q.text}</td>
+                  <td>
+                    {q.text}
+                    {q.language && <> <span className="badge">{labLanguage(q.language).label} only</span></>}
+                  </td>
                   <td>{q.topic ?? '—'}</td>
                   <td>{DIFFICULTY_LABEL[q.difficulty]}</td>
                   <td>{q.type === 'SINGLE' ? 'Single' : 'Multiple'}</td>
@@ -146,7 +152,7 @@ function CsvImport({ examId }: { examId: number }) {
       <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Bulk import from CSV</summary>
       <div className="stack" style={{ marginTop: 12 }}>
         <p className="faint" style={{ margin: 0 }}>
-          Columns: type (SINGLE or MULTI), topic, difficulty (EASY, MEDIUM or HARD; blank is MEDIUM), question, code, option_a … option_f, correct (letters, e.g. B or A;C), explanation.
+          Columns: type (SINGLE or MULTI), topic, difficulty (EASY, MEDIUM or HARD; blank is MEDIUM), question, code, option_a … option_f, correct (letters, e.g. B or A;C), explanation. Optional: language (TYPESCRIPT or JAVASCRIPT for a question only those candidates should get; blank for everyone).
           If any row is invalid, nothing is imported.{' '}
           <button type="button" className="linkish" style={{ color: 'var(--primary)' }} onClick={downloadTemplate}>Download template</button>
         </p>
@@ -214,6 +220,16 @@ function QuestionEditor({ examId, question, onDone }: { examId: number; question
             <option value="EASY">Easy</option>
             <option value="MEDIUM">Medium</option>
             <option value="HARD">Hard</option>
+          </select>
+        </Field>
+        <Field label="Language" hint="Candidates choose TypeScript or JavaScript. Limit a question to one only if it doesn't apply to the other.">
+          <select
+            value={form.language ?? ''}
+            onChange={(e) => setForm({ ...form, language: (e.target.value || null) as LabLanguage | null })}
+          >
+            <option value="">Both languages</option>
+            <option value="TYPESCRIPT">TypeScript only</option>
+            <option value="JAVASCRIPT">JavaScript only</option>
           </select>
         </Field>
       </div>

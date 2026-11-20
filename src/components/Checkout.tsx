@@ -45,6 +45,7 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
   const queryClient = useQueryClient()
   const slug = offer.exam.slug
   const isLab = offer.exam.kind === 'LAB'
+  const hasLanguage = offer.exam.kind !== 'PRACTICE'
   const [language, setLanguage] = useState<LabLanguage>('TYPESCRIPT')
   const [code, setCode] = useState('')
   const [paying, setPaying] = useState(false)
@@ -70,7 +71,7 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
   const checkout = useMutation({
     mutationFn: () => post<CheckoutResult>(`/api/exams/${slug}/checkout`, {
         couponCode: q?.couponCode ?? '',
-        ...(isLab ? { language } : {}),
+        ...(hasLanguage ? { language } : {}),
       }),
     onSuccess: async (res) => {
       if (res.status === 'ENROLLED' || !res.payment) return finished()
@@ -156,7 +157,9 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
 
   return (
     <div className="stack">
-      {isLab && <LanguagePicker name={`language-${slug}`} value={language} onChange={setLanguage} disabled={busy} />}
+      {hasLanguage && (
+        <LanguagePicker name={`language-${slug}`} value={language} onChange={setLanguage} disabled={busy} lab={isLab} />
+      )}
 
       {q && (
         <div className="price-lines">

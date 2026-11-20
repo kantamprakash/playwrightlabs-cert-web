@@ -229,7 +229,7 @@ function ExamCard({ access: a, serverTime, minNotice }: { access: ExamAccess; se
           </div>
           {a.labLanguage && (
             <div style={{ marginTop: 4 }}>
-              Tests in <strong>{labLanguage(a.labLanguage).label}</strong>
+              {a.exam.kind === 'LAB' ? 'Tests in' : 'Exam language:'} <strong>{labLanguage(a.labLanguage).label}</strong>
               {canSchedule && !changingLanguage && (
                 <>
                   {' · '}
@@ -289,6 +289,7 @@ function ExamCard({ access: a, serverTime, minNotice }: { access: ExamAccess; se
             value={a.labLanguage}
             onChange={(l) => changeLanguage.mutate(l)}
             disabled={changeLanguage.isPending}
+            lab={a.exam.kind === 'LAB'}
           />
           {changeLanguage.isError && <Alert kind="error">{changeLanguage.error.message}</Alert>}
           <div className="row">

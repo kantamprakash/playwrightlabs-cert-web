@@ -97,7 +97,7 @@ export type ExamSummary = {
   retakeCooldownDays: number
 }
 
-/** The language a lab exam's tests are written in, chosen at checkout. */
+/** The language a certification exam is taken in, chosen at checkout: a lab's test files, or which questions. */
 export type LabLanguage = 'TYPESCRIPT' | 'JAVASCRIPT'
 
 export const LAB_LANGUAGES: { value: LabLanguage; label: string; extension: string }[] = [
@@ -174,7 +174,7 @@ export type ExamAccess = {
   attemptId: number | null
   scorePercent: number | null
   passed: boolean | null
-  /** Lab exams only: the language the tests are (or will be) written in. */
+  /** The exam's language (TypeScript or JavaScript); null for practice tests. */
   labLanguage: LabLanguage | null
 }
 
