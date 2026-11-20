@@ -66,7 +66,7 @@ export function Dashboard() {
             <div className="card">
               <h3>No exams are open yet</h3>
               <p className="muted" style={{ margin: 0 }}>
-                The Playwright Certified Tester exam opens soon. <a href={`${MAIN_SITE}/contact.html`}>Contact Playwright Labs</a> if
+                The Playwright Certified Professional exam opens soon. <a href={`${MAIN_SITE}/contact.html`}>Contact Playwright Labs</a> if
                 you have questions.
               </p>
             </div>

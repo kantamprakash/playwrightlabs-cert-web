@@ -136,7 +136,7 @@ function ExamEditor({ exam, onDone }: { exam: AdminExam | null; onDone: () => vo
       <Field label="Title" error={fields.title}>
         <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
       </Field>
-      <Field label="Slug" hint="Used in URLs, e.g. playwright-certified-tester." error={fields.slug}>
+      <Field label="Slug" hint="Used in URLs, e.g. playwright-certified-professional." error={fields.slug}>
         <input type="text" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
       </Field>
       <Field label="Description" error={fields.description}>
