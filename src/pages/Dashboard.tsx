@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import {
-  api, formatDate, formatDateTime, post, put, rupees,
-  type Dashboard as DashboardData, type ExamAccess, type ExamSummary, type Offer, type OrderView, type PracticeResult,
+  api, formatDate, formatDateTime, labLanguage, post, put, rupees,
+  type Dashboard as DashboardData, type ExamAccess, type LabLanguage, type ExamSummary, type Offer, type OrderView, type PracticeResult,
 } from '../api'
 import { useMe } from '../auth'
 import { Checkout } from '../components/Checkout'
 import { Alert } from '../components/Field'
+import { LanguagePicker } from '../components/LanguagePicker'
 import { MAIN_SITE } from '../components/Layout'
 import { SchedulePicker } from '../components/SchedulePicker'
 
@@ -212,6 +213,11 @@ function ExamCard({ access: a, serverTime, minNotice }: { access: ExamAccess; se
     },
   })
   const canSchedule = a.state === 'NOT_SCHEDULED' || a.state === 'SCHEDULED' || a.state === 'MISSED' || a.state === 'READY'
+  const [changingLanguage, setChangingLanguage] = useState(false)
+  const changeLanguage = useMutation({
+    mutationFn: (language: LabLanguage) => put(`/api/me/enrolments/${a.entitlementId}/language`, { language }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+  })
 
   return (
     <div className="card stack">
@@ -219,8 +225,19 @@ function ExamCard({ access: a, serverTime, minNotice }: { access: ExamAccess; se
         <div>
           <h3 style={{ marginBottom: 4 }}>{a.exam.title}</h3>
           <div className="faint">
-            {a.exam.questionCount} questions · {a.exam.durationMinutes} minutes · Pass mark {a.exam.passPercent}%
+            {a.exam.questionCount} {a.exam.kind === 'LAB' ? 'hands-on tasks' : 'questions'} · {a.exam.durationMinutes} minutes · Pass mark {a.exam.passPercent}%
           </div>
+          {a.labLanguage && (
+            <div style={{ marginTop: 4 }}>
+              Tests in <strong>{labLanguage(a.labLanguage).label}</strong>
+              {canSchedule && !changingLanguage && (
+                <>
+                  {' · '}
+                  <button className="link-button" onClick={() => setChangingLanguage(true)}>Change</button>
+                </>
+              )}
+            </div>
+          )}
           {a.state === 'NOT_SCHEDULED' && <div className="faint">Book a time before {formatDate(a.expiresAt)}</div>}
           {(a.state === 'SCHEDULED' || a.state === 'READY') && (
             <div style={{ marginTop: 4 }}>
@@ -265,6 +282,20 @@ function ExamCard({ access: a, serverTime, minNotice }: { access: ExamAccess; se
         <Countdown label="Your exam starts in" to={a.scheduledAt!} serverTime={serverTime} />
       )}
       {a.state === 'READY' && <Countdown label="Time left to start" to={a.startWindowEndsAt!} serverTime={serverTime} urgent />}
+      {changingLanguage && canSchedule && a.labLanguage && (
+        <div className="stack">
+          <LanguagePicker
+            name={`language-${a.entitlementId}`}
+            value={a.labLanguage}
+            onChange={(l) => changeLanguage.mutate(l)}
+            disabled={changeLanguage.isPending}
+          />
+          {changeLanguage.isError && <Alert kind="error">{changeLanguage.error.message}</Alert>}
+          <div className="row">
+            <button className="btn secondary small" onClick={() => { changeLanguage.reset(); setChangingLanguage(false) }}>Done</button>
+          </div>
+        </div>
+      )}
       {choosing && canSchedule && (
         <SchedulePicker
           minNoticeMinutes={minNotice}

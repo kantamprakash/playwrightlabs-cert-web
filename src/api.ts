@@ -97,6 +97,18 @@ export type ExamSummary = {
   retakeCooldownDays: number
 }
 
+/** The language a lab exam's tests are written in, chosen at checkout. */
+export type LabLanguage = 'TYPESCRIPT' | 'JAVASCRIPT'
+
+export const LAB_LANGUAGES: { value: LabLanguage; label: string; extension: string }[] = [
+  { value: 'TYPESCRIPT', label: 'TypeScript', extension: 'ts' },
+  { value: 'JAVASCRIPT', label: 'JavaScript', extension: 'js' },
+]
+
+export function labLanguage(value: LabLanguage) {
+  return LAB_LANGUAGES.find((l) => l.value === value) ?? LAB_LANGUAGES[0]
+}
+
 /** e.g. "₹2,999" */
 export function rupees(amount: number): string {
   return '₹' + amount.toLocaleString('en-IN')
@@ -162,6 +174,8 @@ export type ExamAccess = {
   attemptId: number | null
   scorePercent: number | null
   passed: boolean | null
+  /** Lab exams only: the language the tests are (or will be) written in. */
+  labLanguage: LabLanguage | null
 }
 
 /** certified=false is a certificate of participation (issued below the pass mark). */
@@ -252,6 +266,7 @@ export type LabTaskResult = {
 
 export type LabView = {
   practiceAppUrl: string
+  language: LabLanguage
   practiceRunsLeft: number
   tasks: LabTask[]
   grading: boolean

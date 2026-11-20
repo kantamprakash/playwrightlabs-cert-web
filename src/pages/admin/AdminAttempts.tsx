@@ -24,6 +24,7 @@ type LabReview = {
   status: string
   scorePercent: number | null
   gradingError: string | null
+  language: 'TYPESCRIPT' | 'JAVASCRIPT'
   tasks: { taskId: number; title: string; code: string; score: number | null; integrityIssue: string | null; feedback: string[] }[]
 }
 
@@ -103,7 +104,7 @@ function LabReviewPanel({ attemptId, onClose }: { attemptId: number; onClose: ()
       <div className="spread">
         <div>
           <h2 style={{ margin: 0 }}>Lab submission #{data.attemptId}</h2>
-          <div className="faint">{data.candidateEmail} · {data.status}{data.scorePercent != null && ` · ${data.scorePercent}%`}</div>
+          <div className="faint">{data.candidateEmail} · {data.status} · {data.language === 'JAVASCRIPT' ? 'JavaScript' : 'TypeScript'}{data.scorePercent != null && ` · ${data.scorePercent}%`}</div>
         </div>
         <div className="row">
           <button className="btn secondary small" disabled={regrade.isPending || data.status === 'GRADING'} onClick={() => regrade.mutate()}>

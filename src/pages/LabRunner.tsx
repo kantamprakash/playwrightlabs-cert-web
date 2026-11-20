@@ -2,11 +2,15 @@ import { javascript } from '@codemirror/lang-javascript'
 import CodeMirror from '@uiw/react-codemirror'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { api, ApiError, post, put, type Attempt, type LabRun, type LabTask } from '../api'
+import { api, ApiError, labLanguage, post, put, type Attempt, type LabRun, type LabTask } from '../api'
 import { Alert } from '../components/Field'
 import { ThemeToggle } from '../components/Layout'
 
-const extensions = [javascript({ typescript: true })]
+// Built once per language, so the editor isn't reconfigured on every render.
+const EDITOR = {
+  TYPESCRIPT: [javascript({ typescript: true })],
+  JAVASCRIPT: [javascript()],
+}
 
 /**
  * The hands-on lab: one test file per task, written in the browser, run against the practice app with
@@ -15,6 +19,7 @@ const extensions = [javascript({ typescript: true })]
  */
 export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinished: () => void }) {
   const lab = attempt.lab!
+  const language = labLanguage(lab.language ?? 'TYPESCRIPT')
   const [active, setActive] = useState(lab.tasks[0]?.id)
   const [code, setCode] = useState<Record<number, string>>(() => Object.fromEntries(lab.tasks.map((t) => [t.id, t.code])))
   const [runs, setRuns] = useState<Record<number, LabRun | null>>(() => Object.fromEntries(lab.tasks.map((t) => [t.id, t.lastRun])))
@@ -135,7 +140,7 @@ export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinishe
           </a>
           <p className="faint" style={{ margin: 0 }}>
             Your tests run with baseURL set to the practice app, so use relative paths such as page.goto('login.html').
-            Chromium only. Only @playwright/test can be imported.
+            Chromium only. Only @playwright/test can be imported{language.value === 'JAVASCRIPT' ? ', with import (not require)' : ''}.
           </p>
           <button className="btn block" onClick={() => setConfirming(true)}>Submit lab</button>
         </aside>
@@ -148,7 +153,10 @@ export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinishe
 
           <div className="card tight stack">
             <div className="spread">
-              <code>{task.key}.spec.ts</code>
+              <span className="row" style={{ gap: 8 }}>
+                <code>{task.key}.spec.{language.extension}</code>
+                <span className="badge">{language.label}</span>
+              </span>
               <div className="row">
                 <span className="faint">{runsLeft} test runs left</span>
                 <button className="btn" disabled={running || runsLeft === 0} onClick={runTests}>
@@ -160,7 +168,7 @@ export function LabRunner({ attempt, onFinished }: { attempt: Attempt; onFinishe
               <CodeMirror
                 value={code[active]}
                 height="420px"
-                extensions={extensions}
+                extensions={EDITOR[language.value]}
                 basicSetup={{ tabSize: 2 }}
                 onChange={(value) => {
                   dirty.current.add(active)

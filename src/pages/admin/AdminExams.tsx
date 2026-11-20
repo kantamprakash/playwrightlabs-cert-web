@@ -283,7 +283,7 @@ function BlueprintEditor({ exam, onDone }: { exam: AdminExam; onDone: () => void
   )
 }
 
-type AdminLabTask = { id: number; key: string; position: number; title: string; instructions: string; starterCode: string; bugs: string[]; active: boolean }
+type AdminLabTask = { id: number; key: string; position: number; title: string; instructions: string; starterCode: string; starterCodeJs: string; bugs: string[]; active: boolean }
 
 /** A lab exam's tasks. They are defined with the practice app (playwrightlabs-cert-lab), so this view is read-only. */
 function LabTasks({ exam, onDone }: { exam: AdminExam; onDone: () => void }) {
@@ -304,7 +304,7 @@ function LabTasks({ exam, onDone }: { exam: AdminExam; onDone: () => void }) {
       </p>
       {data?.map((t) => (
         <div className="card stack" key={t.id}>
-          <h3 style={{ margin: 0 }}>{t.position}. {t.title} <code className="faint">{t.key}.spec.ts</code></h3>
+          <h3 style={{ margin: 0 }}>{t.position}. {t.title} <code className="faint">{t.key}.spec.ts / .spec.js</code></h3>
           <div className="lab-instructions">{t.instructions}</div>
           <div><strong>Hidden bugs:</strong> {t.bugs.map((b) => <code key={b} style={{ marginRight: 8 }}>{b}</code>)}</div>
         </div>

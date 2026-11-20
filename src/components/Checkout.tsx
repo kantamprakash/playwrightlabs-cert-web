@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { post, rupees, type CheckoutResult, type Offer, type Quote } from '../api'
+import { post, rupees, type CheckoutResult, type LabLanguage, type Offer, type Quote } from '../api'
 import { Alert } from './Field'
+import { LanguagePicker } from './LanguagePicker'
 
 type RazorpaySuccess = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }
 
@@ -43,6 +44,8 @@ function loadRazorpay(): Promise<void> {
 export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: () => void; onCancel: () => void }) {
   const queryClient = useQueryClient()
   const slug = offer.exam.slug
+  const isLab = offer.exam.kind === 'LAB'
+  const [language, setLanguage] = useState<LabLanguage>('TYPESCRIPT')
   const [code, setCode] = useState('')
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
@@ -65,7 +68,10 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
   }
 
   const checkout = useMutation({
-    mutationFn: () => post<CheckoutResult>(`/api/exams/${slug}/checkout`, { couponCode: q?.couponCode ?? '' }),
+    mutationFn: () => post<CheckoutResult>(`/api/exams/${slug}/checkout`, {
+        couponCode: q?.couponCode ?? '',
+        ...(isLab ? { language } : {}),
+      }),
     onSuccess: async (res) => {
       if (res.status === 'ENROLLED' || !res.payment) return finished()
       const p = res.payment
@@ -150,6 +156,8 @@ export function Checkout({ offer, onDone, onCancel }: { offer: Offer; onDone: ()
 
   return (
     <div className="stack">
+      {isLab && <LanguagePicker name={`language-${slug}`} value={language} onChange={setLanguage} disabled={busy} />}
+
       {q && (
         <div className="price-lines">
           <span>{q.retake ? 'Retake' : 'Certification exam'}</span>
